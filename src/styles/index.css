@@ -1,0 +1,305 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light — the default. A true neutral (zinc) scale, no blue cast: the
+       Solvix reference reads as paper and ink, and lets the few coloured
+       status pills carry meaning on their own. */
+    --ink-50: 250 250 250;
+    --ink-100: 244 244 245;
+    --ink-200: 231 231 233;
+    --ink-300: 212 212 216;
+    --ink-400: 161 161 170;
+    --ink-500: 113 113 122;
+    --ink-600: 82 82 91;
+    --ink-700: 63 63 70;
+    --ink-800: 39 39 42;
+    --ink-900: 17 17 19;
+    --surface: 255 255 255;
+    --canvas: 244 244 245;
+
+    /* Accent: ink-black. */
+    --brand-50: 244 244 245;
+    --brand-100: 228 228 231;
+    --brand-200: 212 212 216;
+    --brand-300: 161 161 170;
+    --brand-400: 82 82 91;
+    --brand-500: 39 39 42;
+    --brand-600: 24 24 27;
+    --brand-700: 9 9 11;
+    --brand-800: 0 0 0;
+    --brand-900: 0 0 0;
+    --brand-fg: 255 255 255;
+
+    --header-height: 3.5rem;
+    --sidebar-width: 15.5rem;
+    --sidebar-width-collapsed: 4rem;
+  }
+
+  /* Dark — the scale inverts, so `text-ink-900` stays "the strongest text"
+     and `bg-ink-50` stays "the page behind the cards". Components need no
+     changes because the names still mean the same thing. */
+  [data-theme='dark'] {
+    --ink-50: 14 14 16;
+    --ink-100: 28 28 31;
+    --ink-200: 42 42 46;
+    --ink-300: 63 63 70;
+    --ink-400: 113 113 122;
+    --ink-500: 161 161 170;
+    --ink-600: 196 196 202;
+    --ink-700: 220 220 224;
+    --ink-800: 237 237 240;
+    --ink-900: 250 250 250;
+    --surface: 24 24 27;
+    --canvas: 14 14 16;
+
+    /* In the dark the accent inverts: near-white fills, dark text on them. */
+    --brand-50: 39 39 42;
+    --brand-100: 52 52 58;
+    --brand-200: 82 82 91;
+    --brand-300: 113 113 122;
+    --brand-400: 161 161 170;
+    --brand-500: 212 212 216;
+    --brand-600: 244 244 245;
+    --brand-700: 255 255 255;
+    --brand-800: 255 255 255;
+    --brand-900: 255 255 255;
+    --brand-fg: 17 17 19;
+
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-ink-200;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-canvas text-base text-ink-800 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+    margin: 0;
+  }
+
+  /* Arabic gets its own face and slightly looser leading — it needs the room. */
+  html[lang='ar'] body {
+    @apply font-arabic;
+    line-height: 1.7;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold text-ink-900;
+    text-wrap: balance;
+  }
+
+  /* Tabular figures everywhere numbers are compared in a column. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Latin numerals stay LTR even inside an Arabic RTL paragraph. */
+  .numeric {
+    direction: ltr;
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ink-900/25 ring-offset-2 ring-offset-surface;
+  }
+
+  ::placeholder {
+    @apply text-ink-400;
+  }
+
+  ::selection {
+    @apply bg-ink-900 text-ink-50;
+  }
+
+  /* Scrollbars: present but quiet. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.ink.300') transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full border-[3px] border-solid border-transparent bg-ink-300 bg-clip-content;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-400;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Keyboard key, as used in the search footer. */
+  .kbd {
+    @apply inline-flex min-w-[1.25rem] items-center justify-center rounded border border-ink-200 bg-ink-50 px-1 font-sans text-2xs font-medium text-ink-600;
+  }
+
+  /* Shared surface treatment: white card, hairline border, whisper of a shadow. */
+  .surface {
+    @apply rounded-lg border border-ink-200 bg-surface shadow-xs;
+  }
+
+  /* The section label above a card, as in the reference: small caps, wide tracking. */
+  .eyebrow {
+    @apply text-2xs font-semibold uppercase tracking-[0.08em] text-ink-500;
+  }
+
+  /* Native checkboxes and radios follow the accent. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: rgb(var(--brand-600));
+  }
+
+  /* Dotted rules separate a ledger or receipt into sections without the hard
+     line of a solid border. Used in statements, movement history, and totals. */
+  .rule-dotted {
+    @apply border-0 border-t border-dashed border-ink-300;
+  }
+
+  .divide-dotted-y > * + * {
+    @apply border-0 border-t border-dashed border-ink-200;
+  }
+
+  /* Skeleton shimmer used by the loading states. */
+  .skeleton {
+    @apply relative overflow-hidden rounded bg-ink-100;
+  }
+
+  .skeleton::after {
+    @apply absolute inset-0 -translate-x-full;
+    content: '';
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0,
+      rgba(255, 255, 255, 0.65) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmer 1.6s infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+      display: none;
+    }
+  }
+}
+
+@layer utilities {
+  /* Mirror an icon that encodes direction (chevrons, arrows) when the page is RTL. */
+  [dir='rtl'] .flip-rtl {
+    transform: scaleX(-1);
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe-area insets: notches, rounded corners and the home indicator on a
+     phone running the app standalone (viewport-fit=cover). Zero elsewhere. */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .ps-safe {
+    padding-inline-start: env(safe-area-inset-left, 0px);
+  }
+  .pe-safe {
+    padding-inline-end: env(safe-area-inset-right, 0px);
+  }
+  .px-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  /* A footer that sits on the home indicator keeps its own padding as well. */
+  .pb-safe-3 {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+  .pb-safe-4 {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Dialog footers on a phone: every action is a full thumb-height target, and a
+   row of actions (Cancel · Confirm) shares the width, the primary getting the
+   larger share. Applies to nested rows too, so a footer that wraps its buttons
+   in a div (checkout) gets the same treatment without changing its markup. */
+@media (max-width: 639.98px) {
+  .sheet-footer button {
+    min-height: 2.75rem;
+  }
+  .sheet-footer > button,
+  .sheet-footer div:has(> button + button) > button {
+    flex: 1 1 0%;
+  }
+  .sheet-footer > button:last-child,
+  .sheet-footer div:has(> button + button) > button:last-child {
+    flex-grow: 1.6;
+  }
+
+  /* A dialog body laid out as a grid that only gains columns on wider
+     screens (checkout: `lg:grid-cols-3`) has one implicit `auto` column on a
+     phone, which grows to fit the longest unbreakable line and pushes the
+     sheet sideways. Pin that column to the sheet's width instead. */
+  .sheet-body > .grid:not([class^='grid-cols-']):not([class*=' grid-cols-']) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Printing a report (restaurant session report, etc.): paper gets the page
+   content only — no sidebar, top bar or floating controls. */
+@media print {
+  aside,
+  header.sticky {
+    display: none !important;
+  }
+  html,
+  body,
+  #root,
+  main {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  section {
+    break-inside: avoid;
+  }
+}

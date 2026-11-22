@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#18181b" media="(prefers-color-scheme: dark)" />
+    <meta name="application-name" content="PosComplete" />
+    <meta name="apple-mobile-web-app-title" content="PosComplete" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="description" content="Multi-industry point of sale and business management platform." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+
+    <title>PosComplete — Front Office</title>
+
+    <script>
+      /* GitHub Pages SPA fallback: 404.html turns /repo/pos into /repo/?/pos;
+         this restores the real path before the router reads it. */
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function (s) {
+            return s.replace(/~and~/g, '&');
+          }).join('?');
+          window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      })(window.location);
+    </script>
+    <script>
+      /* Apply the stored language before first paint so the layout never flashes
+         in the wrong direction. Mirrors the default in src/i18n/config.ts. */
+      (function () {
+        try {
+          var stored = localStorage.getItem('app.language');
+          var lang = stored === 'en' || stored === 'ar' ? stored : 'ar';
+          document.documentElement.lang = lang;
+          document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+
+          var pref = localStorage.getItem('app.theme') || 'system';
+          var dark =
+            pref === 'dark' ||
+            (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        } catch (e) {
+          /* Private mode or blocked storage — the default markup already covers it. */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

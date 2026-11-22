@@ -1,0 +1,26 @@
+{
+  "name": "PosComplete",
+  "short_name": "PosComplete",
+  "description": "Point of sale, kitchen display and back office for restaurants and shops.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#ffffff",
+  "background_color": "#f4f4f5",
+  "lang": "ar",
+  "dir": "auto",
+  "categories": ["business", "productivity", "food"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Point of Sale", "short_name": "POS", "url": "./pos", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Kitchen", "short_name": "Kitchen", "url": "./kitchen", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}
