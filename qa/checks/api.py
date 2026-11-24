@@ -5,17 +5,28 @@ from .common import Check, Result
 
 C = {c.id: c for c in [
     Check("API-MAJ-01", "Major", "API", "The API does not answer",
-          "GET /health returns 200 JSON"),
+          "GET /health returns 200 JSON", "curl http://SERVER/health", "200 {\"status\":\"ok\", …}",
+          "API · container down or crashing: `docker compose logs api` on the server; MyPosAPI src/PosApi/Program.cs (startup, /health ~l.492); nginx route in MyPOSFO deploy/nginx.conf."),
     Check("API-MAJ-02", "Major", "API", "The API cannot reach the database",
-          "GET /health/db returns 200"),
+          "GET /health/db returns 200", "curl http://SERVER/health/db", "200 {\"status\":\"ok\",\"database\":\"MyPosDB…\"}",
+          "API/DB · connection string in /opt/mypos/<env>/.env (DB_NAME, APP_DB_*), src/PosApi/Data/SqlConnectionFactory.cs, `docker compose ps db`."),
     Check("API-MAJ-03", "Major", "API", "Sign-in endpoint fails with a server error",
-          "POST /api/auth/login answers with a normal response (no 5xx)"),
+          "POST /api/auth/login answers with a normal response (no 5xx)", "POST /api/auth/login {identifier, password} for an unknown user",
+          "4xx (refused) — never 5xx",
+          "API · src/PosApi/Features/Access/AuthEndpoints.cs RequestOtpAsync; DB auth tables (11-api-auth-tables.sql)."),
     Check("API-MOD-01", "Moderate", "API", "Private data is reachable without signing in",
-          "Sales, catalog, tax settings and sessions refuse requests without a token (401)"),
+          "Sales, catalog, tax settings and sessions refuse requests without a token (401)", "GET each private endpoint with no token",
+          "401 for all",
+          "API · the endpoint's MapGroup in src/PosApi/Features/** is missing .RequireAuthorization()."),
     Check("API-MOD-02", "Moderate", "API", "Bad input causes a server error",
-          "Malformed JSON gets a 400, not a 500"),
+          "Malformed JSON gets a 400, not a 500", "POST /api/auth/login with broken JSON", "400",
+          "API · request validation / exception handler in src/PosApi/Program.cs."),
     Check("API-MIN-01", "Minor", "API", "API responses are slow",
-          "Health answers in under 1 s"),
+          "Health answers in under 1 s", "Time GET /health", "< 1000 ms",
+          "API/Ops · server load (`docker stats`), cold start after deploy."),
+    Check("API-MIN-02", "Minor", "API", "The API does not report its version",
+          "GET /health tells which version is running", "Read version from GET /health", "version = the deployed tag (sha-… or v…)",
+          "API · src/PosApi/Program.cs /health (reads APP_VERSION, set by deploy/compose.yml)."),
 ]}
 PROTECTED = ["/api/sales", "/api/catalog/items", "/api/settings/tax", "/api/restaurant-sessions/status"]
 
@@ -48,6 +59,13 @@ def run(base: str) -> list[Result]:
                 add(cid, "skip", "Skipped: the API is not reachable.")
         return out
     add("API-MIN-01", "pass" if secs < 1 else "fail", f"/health answered in {secs * 1000:.0f} ms.")
+    try:
+        version = json.loads(body).get("version") or ""
+    except ValueError:
+        version = ""
+    out[-1].extra["version"] = version
+    add("API-MIN-02", "pass" if version and version != "dev" else "fail",
+        f"API reports version {version}." if version else "GET /health does not include a version.")
 
     st, ct, body, _ = call(base, "/health/db")
     add("API-MAJ-02", "pass" if st == 200 else "fail", f"/health/db returned {st}: {body[:120].strip()}")

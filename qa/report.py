@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64, html
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from checks.common import Result, SEVERITIES
+from checks.common import Result, SEVERITIES, LAYER
 
 CSS = """
 @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
@@ -26,12 +26,14 @@ h2 { font-size: 16px; margin: 0 0 12px; }
 .id { color: #6b7280; font-size: 11px; font-weight: 600; }
 .issue h3 { font-size: 19px; margin: 12px 0 6px; } .issue p { font-size: 13px; line-height: 1.45; margin: 0 0 14px; }
 .area { color: #6b7280; font-size: 11px; }
-.shot { text-align: center; } .shot img { max-width: 100%; max-height: 165mm; border: 1px solid #e5e7eb; }
+.shot { text-align: center; } .shot img { max-width: 100%; max-height: 132mm; border: 1px solid #e5e7eb; }
 table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
 td:first-child { white-space: nowrap; }
 th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid #eef0f2; vertical-align: top; }
 th { color: #6b7280; font-weight: 600; }
 .st-pass { color: #0b6b4f; font-weight: 600; } .st-fail { color: #b91c1c; font-weight: 600; } .st-skip { color: #6b7280; }
+.fix { background: #f3f4f6; border-left: 3px solid #0b6b4f; padding: 8px 10px; font-size: 11.5px; margin: 0 0 14px; }
+.fix b { color: #0b6b4f; }
 .clean { padding: 30px; text-align: center; color: #0b6b4f; font-size: 16px; border: 1px dashed #9fd8bf; border-radius: 6px; }
 """
 
@@ -63,11 +65,12 @@ def build_html(results: list[Result], meta: dict) -> str:
         current = r.check.severity
         out.append(f"<div class='issue{' first' if first else ''}'>{heading}"
                    f"<span class='badge {r.check.severity}'>{r.check.severity}</span><span class='id'>{e(r.check.id)}</span>"
-                   f"<h3>{e(r.check.title)}</h3><div class='area'>{e(r.check.area)}</div><p>{e(r.detail)}</p>{_img(r.screenshot)}</div>")
+                   f"<h3>{e(r.check.title)}</h3><div class='area'>{e(r.check.area)} · expected: {e(r.check.expected)}</div><p>{e(r.detail)}</p>"
+                   f"<div class='fix'><b>Where to fix</b> — {e(r.check.fix)}<br><b>Re-test</b> — {e(r.check.steps)}</div>{_img(r.screenshot)}</div>")
         first = False
-    out.append("<div class='issue'><h2>Checks run</h2><table><tr><th>ID</th><th>Area</th><th>What is checked</th><th>Result</th><th>Seen</th></tr>")
+    out.append("<div class='issue'><h2>Checks run</h2><table><tr><th>ID</th><th>Layer</th><th>Test case</th><th>Result</th><th>Seen</th></tr>")
     for r in sorted(results, key=lambda r: r.check.id):
-        out.append(f"<tr><td>{e(r.check.id)}</td><td>{e(r.check.area)}</td><td>{e(r.check.checks)}</td>"
+        out.append(f"<tr><td>{e(r.check.id)}</td><td>{LAYER.get(r.check.area, r.check.area)}</td><td>{e(r.check.checks)}</td>"
                    f"<td class='st-{r.status}'>{r.status}</td><td>{e(r.detail)}</td></tr>")
     out.append("</table></div></body></html>")
     return "".join(out)

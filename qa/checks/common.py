@@ -4,7 +4,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
+SUITE_VERSION = "1.1.0"   # bump when checks are added or changed; printed on every report
 SEVERITIES = ("Major", "Moderate", "Minor")
+LAYER = {"Frontend": "FO", "API": "API", "Database": "DB", "Health": "Ops"}
 
 
 @dataclass
@@ -14,6 +16,9 @@ class Check:
     area: str          # Frontend | API | Database
     title: str         # the problem, phrased as it reads in the report when the check fails
     checks: str        # what is verified, shown in the "Checks run" table
+    steps: str = ""    # how the test runs (also the manual steps a person can repeat)
+    expected: str = "" # the passing result
+    fix: str = ""      # where to look when it fails: layer, file, function/line
 
 
 @dataclass

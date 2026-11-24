@@ -7,29 +7,67 @@ from .common import Check, Result
 
 C = {c.id: c for c in [
     Check("WEB-MAJ-01", "Major", "Frontend", "The app does not load",
-          "Login screen opens within 15 s without script errors"),
+          "Login screen opens within 15 s without script errors",
+          "Open /login on desktop.", "Login screen with sign-in options; no script errors.",
+          "FO · src/main.tsx, src/App.tsx (router), the failing chunk named in the browser console; check the web container logs."),
     Check("WEB-MAJ-02", "Major", "Frontend", "Owner cannot sign in",
-          "Owner signs in and the dashboard opens"),
+          "Owner signs in and the dashboard opens",
+          "Sign in as owner@lazeez.sa / Demo@1234.", "Lands on /dashboard with the menu.",
+          "FO · src/features/auth/pages/Login.tsx, src/features/auth/context/AuthContext.tsx · API mode: MyPosAPI Features/Access/AuthEndpoints.cs (/api/auth/login, /verify)."),
+    Check("WEB-MAJ-06", "Major", "Frontend", "A wrong PIN is accepted",
+          "A wrong staff PIN is refused and stays on the login screen",
+          "Login → Staff PIN → 9999.", "“That PIN is not recognised.”; still on /login.",
+          "FO · src/features/auth/components/PinPad.tsx, src/features/auth/services/mockAuthService.ts / apiAuthService.ts (PIN lookup)."),
     Check("WEB-MAJ-03", "Major", "Frontend", "A cash sale cannot be completed",
-          "Cashier sells an item for cash; the done screen shows a numeric order number and the change"),
+          "Cashier sells an item for cash; the done screen shows a numeric order number and the change",
+          "PIN 1111 → Butter Croissant → Add → Charge → Exact → Complete → Place order.",
+          "Done screen with order #N (number) and invoice 100xxx.",
+          "FO · src/pages/PosPage.tsx, src/features/pos/CheckoutModal.tsx (canComplete ~l.193), src/services/salesService.ts commit() ~l.181, src/features/pos/OrderComplete.tsx l.106 · API mode: POST /api/sales → DB sales.usp_CommitSale (20-sale-idempotency.sql)."),
+    Check("WEB-MAJ-07", "Major", "Frontend", "A card sale cannot be completed",
+          "Cashier sells an item paid by card",
+          "PIN 1111 → Butter Croissant → Add → Charge → Card → Complete → Place order.",
+          "Done screen with order #N; no change due.",
+          "FO · src/features/pos/CheckoutModal.tsx (mode 'card', buildResult ~l.200), src/services/salesService.ts commit()."),
     Check("WEB-MAJ-04", "Major", "Frontend", "Charge button is covered on the handheld screen",
-          "At 360×720 the Charge button is visible and nothing sits on top of it"),
+          "At 360×720 the Charge button is visible and nothing sits on top of it",
+          "Phone 360×720 → PIN 1111 → add an item → look at Charge.", "Charge fully visible; tapping it opens checkout.",
+          "FO · src/pages/PosPage.tsx phone bar (data-testid phone-charge ~l.742) and the bottom tab bar in src/components/layout (z-index / bottom padding)."),
     Check("WEB-MAJ-05", "Major", "Frontend", "Malformed cash amount is accepted",
-          "Typing 1.5abc as cash received is cleaned or rejected, and checkout stays blocked while cash is short"),
+          "Typing 1.5abc as cash received is cleaned or rejected, and checkout stays blocked while cash is short",
+          "Charge → Cash → type 1.5abc in Amount received.", "Field shows 1.5 (letters dropped); Complete disabled while short.",
+          "FO · src/components/ui/PriceInput.tsx sanitise() l.11, src/features/pos/CheckoutModal.tsx canComplete ~l.193."),
     Check("WEB-MOD-01", "Moderate", "Frontend", "Some pages fail to open",
-          "Every page in the owner's menu opens without a crash or error screen"),
+          "Every page in the owner's menu opens without a crash or error screen",
+          "As owner, open every menu link.", "Each page renders; no error screen.",
+          "FO · the page file under src/pages/ for each listed route (routes in src/config/navigation.ts); stack trace in the console."),
     Check("WEB-MOD-02", "Moderate", "Frontend", "Pages overflow sideways on the phone",
-          "Main pages fit a 360 px wide phone without sideways scrolling"),
+          "Main pages fit a 360 px wide phone without sideways scrolling",
+          "Phone 360×720 → dashboard, pos, sales, catalog, customers, kitchen, restaurant, settings.", "No sideways scrolling.",
+          "FO · the listed page: a wide table/grid without overflow-x-auto or a fixed min-width; check with dev tools at 360 px."),
     Check("WEB-MOD-03", "Moderate", "Frontend", "Arabic layout is broken",
-          "Arabic switches the app to right-to-left with Arabic text"),
+          "Arabic switches the app to right-to-left with Arabic text",
+          "Language العربية → dashboard.", "dir=rtl and the text is Arabic.",
+          "FO · src/i18n/I18nProvider.tsx (sets document dir ~l.91), missing keys in src/i18n/locales/ar.ts."),
     Check("WEB-MOD-04", "Moderate", "Frontend", "New sale is missing from the Sales list",
-          "The sale just made appears in Sales"),
+          "The sale just made appears in Sales",
+          "After WEB-MAJ-03 open /sales.", "The new invoice number is listed.",
+          "FO · src/pages/SalesPage.tsx, salesService.list() · API mode: GET /api/sales (MyPosAPI Features/Sales)."),
+    Check("WEB-MOD-05", "Moderate", "Frontend", "Sign out does not work",
+          "Signing out returns to the login screen",
+          "Header menu → Sign out.", "Back on /login; going to /dashboard asks to sign in again.",
+          "FO · src/components/layout/Header.tsx signOut ~l.55, src/features/auth/context/AuthContext.tsx."),
     Check("WEB-MIN-01", "Minor", "Frontend", "Untranslated text keys are visible",
-          "No raw translation keys (like checkout.payment.title) on any page"),
+          "No raw translation keys (like checkout.payment.title) on any page",
+          "Browse every menu page in English.", "Only real words, no dotted keys.",
+          "FO · add the missing key to src/i18n/locales/en.ts and ar.ts (the key is quoted in the result)."),
     Check("WEB-MIN-02", "Minor", "Frontend", "Pages log errors in the browser console",
-          "No console errors while browsing every page"),
+          "No console errors while browsing every page",
+          "Browse every menu page with the console open.", "No red errors.",
+          "FO · the page and message quoted in the result."),
     Check("WEB-MIN-03", "Minor", "Frontend", "First load is slow",
-          "Login screen is usable within 5 s"),
+          "Login screen is usable within 5 s",
+          "Open /login on a fresh browser.", "Usable in ≤ 5 s.",
+          "FO · bundle size (vite build warnings), nginx gzip/cache in deploy/nginx.conf, server load."),
 ]}
 
 PHONE = {"width": 360, "height": 720}
@@ -107,7 +145,10 @@ class Run:
                         if not any(r.check.id == cid for r in self.results):
                             self.add(cid, "skip", "Skipped: the app did not load.")
                     return self.results
+                self.wrong_pin(browser)
                 self.sale_desktop(browser)
+                self.card_sale(browser)
+                self.sign_out(browser)
                 self.phone_charge(browser)
                 self.cash_input(browser)
                 self.owner_pages(browser)
@@ -142,13 +183,7 @@ class Run:
         try:
             self.login_pin(page, "1111")
             self.add_item(page)
-            page.get_by_role("button", name="Charge").first.click(); page.wait_for_timeout(700)
-            page.get_by_role("button", name="Exact").click(); page.wait_for_timeout(300)
-            page.locator("[role=dialog] button").filter(has_text="Complete").last.click(); page.wait_for_timeout(500)
-            page.get_by_role("button", name="Place order").click()
-            no = page.get_by_test_id("done-order-no")
-            no.wait_for(timeout=15000)
-            order_no = no.inner_text().strip()
+            order_no = self.checkout(page, "cash")
             body = page.locator("body").inner_text()
             inv = re.search(r"\b(1\d{5,})\b", body)
             if not re.fullmatch(r"#\d+", order_no):
@@ -167,6 +202,67 @@ class Run:
             self.add("WEB-MAJ-03", "fail", f"The cash sale could not be finished on desktop ({type(e).__name__}: {str(e).splitlines()[0][:140]}).",
                      self.shot(page, "WEB-MAJ-03"))
             self.add("WEB-MOD-04", "skip", "Skipped: no sale was made.")
+        c.close()
+
+    def checkout(self, page: Page, method: str):
+        page.get_by_role("button", name="Charge").first.click(); page.wait_for_timeout(700)
+        if method == "card":
+            page.locator("[role=dialog] button").filter(has_text=re.compile(r"^\s*Card\s*$")).first.click(); page.wait_for_timeout(300)
+        else:
+            page.get_by_role("button", name="Exact").click(); page.wait_for_timeout(300)
+        page.locator("[role=dialog] button").filter(has_text="Complete").last.click(); page.wait_for_timeout(500)
+        page.get_by_role("button", name="Place order").click()
+        no = page.get_by_test_id("done-order-no"); no.wait_for(timeout=15000)
+        return no.inner_text().strip()
+
+    def wrong_pin(self, browser):
+        c = self.ctx(browser, DESKTOP); page = c.new_page()
+        try:
+            page.goto(self.base + "/login"); page.wait_for_load_state("networkidle")
+            tab = page.get_by_role("tab", name="Staff PIN")
+            if tab.count() and tab.is_visible():
+                tab.click()
+            for d in "9999":
+                page.get_by_role("button", name=d, exact=True).click()
+            page.wait_for_timeout(1500)
+            still = "/login" in page.url
+            msg = page.get_by_text(re.compile("not recognised|غير معروف", re.I)).count() > 0
+            if still:
+                self.add("WEB-MAJ-06", "pass", "PIN 9999 was refused" + (" with “That PIN is not recognised.”" if msg else " (no message shown).") )
+            else:
+                self.add("WEB-MAJ-06", "fail", f"PIN 9999 signed someone in and opened {page.url.replace(self.base, '')}.", self.shot(page, "WEB-MAJ-06"))
+        except Exception as e:  # noqa: BLE001
+            self.add("WEB-MAJ-06", "skip", f"Skipped: the PIN pad was not reachable ({type(e).__name__}).")
+        c.close()
+
+    def card_sale(self, browser):
+        c = self.ctx(browser, DESKTOP); page = c.new_page()
+        try:
+            self.login_pin(page, "1111"); self.add_item(page)
+            order_no = self.checkout(page, "card")
+            ok = bool(re.fullmatch(r"#\d+", order_no))
+            self.add("WEB-MAJ-07", "pass" if ok else "fail",
+                     f"Card sale completed: order {order_no}." if ok else f"Card sale finished but the order number shows “{order_no}”.",
+                     None if ok else self.shot(page, "WEB-MAJ-07"))
+        except Exception as e:  # noqa: BLE001
+            self.add("WEB-MAJ-07", "fail", f"The card sale could not be finished ({type(e).__name__}: {str(e).splitlines()[0][:140]}).", self.shot(page, "WEB-MAJ-07"))
+        c.close()
+
+    def sign_out(self, browser):
+        c = self.ctx(browser, {"width": 390, "height": 844}, mobile=True); page = c.new_page()
+        try:
+            self.login_email(page, "owner@lazeez.sa")
+            page.locator("header button").last.click(); page.wait_for_timeout(400)
+            page.get_by_role("menuitem", name=re.compile("Sign out")).click(); page.wait_for_timeout(300)
+            page.locator("[role=dialog] button, [role=alertdialog] button").filter(has_text="Sign out").last.click()
+            page.wait_for_url(lambda u: "/login" in u, timeout=10000)
+            page.goto(self.base + "/dashboard"); page.wait_for_timeout(1200)
+            if "/login" in page.url:
+                self.add("WEB-MOD-05", "pass", "Signed out to /login; /dashboard asks to sign in again.")
+            else:
+                self.add("WEB-MOD-05", "fail", "After signing out, /dashboard still opens without signing in.", self.shot(page, "WEB-MOD-05"))
+        except Exception as e:  # noqa: BLE001
+            self.add("WEB-MOD-05", "fail", f"Sign out could not be completed ({type(e).__name__}).", self.shot(page, "WEB-MOD-05"))
         c.close()
 
     def phone_charge(self, browser):

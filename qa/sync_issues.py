@@ -24,7 +24,8 @@ def main():
     fixed, opened, still = [], [], []
     for cid, r in results.items():
         if r["status"] == "fail":
-            body = f"**{r['severity']} · {r['area']}**\n\n{r['detail']}\n\n_Checks:_ {r['checks']}\n\nSeen in: {run}\n{a.run_url}"
+            body = (f"**{r['severity']} · {r['area']}**\n\n{r['detail']}\n\n**Expected:** {r['expected']}\n\n**Where to fix:** {r['fix']}\n\n"
+                    f"**Re-test:** {r['steps']}\n\nSeen in: {run}\n{a.run_url}\n\nTo fix, tell Claude: `Fix {cid}`")
             if cid in open_issues:
                 gh("issue", "comment", str(open_issues[cid]), "--body", f"Still failing — {run}\n\n{r['detail']}\n{a.run_url}"); still.append(cid)
             else:
