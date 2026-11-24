@@ -34,6 +34,7 @@ jobs:
           QA_BASE_URL: ${{ vars.STAGING_URL || format('http://{0}:8080', secrets.DEPLOY_HOST_STAGING) }}
           QA_TRIGGER: ${{ inputs.trigger || github.event.client_payload.trigger || 'manual' }}
           QA_ENV: staging
+          QA_TARGET: ${{ vars.DEPLOY_TARGET || 'linux' }}
         run: python qa/run_sanity.py --out qa-out
       - name: Sync GitHub issues (open new, close fixed)
         if: always()

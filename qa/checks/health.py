@@ -34,8 +34,14 @@ def run(base: str, env: str) -> list[Result]:
     if not ssh:
         add("HLT-MOD-01", "skip", "Skipped: no server access (QA_SSH)."); add("HLT-MOD-02", "skip", "Skipped: no server access (QA_SSH).")
         return out
-    cmd = (f"df -P / | awk 'NR==2{{print 100-$5}}'; f=$(ls -1t /opt/mypos/{env}/backups/*.bak 2>/dev/null | head -1); "
-           "[ -n \"$f\" ] && echo $(( ($(date +%s) - $(stat -c %Y \"$f\")) / 3600 )) || echo none")
+    if os.environ.get("QA_TARGET") == "windows":
+        folder = {"production": "POSprod", "staging": "POSStageing"}.get(env, "POSprod")
+        cmd = ("$d = Get-PSDrive C; [int](100 * $d.Free / ($d.Used + $d.Free)); "
+               f"$f = Get-ChildItem C:\\Project\\POS\\{folder}\\backups -Filter *.dump -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; "
+               "if ($f) { [int]((Get-Date) - $f.LastWriteTime).TotalHours } else { 'none' }")
+    else:
+        cmd = (f"df -P / | awk 'NR==2{{print 100-$5}}'; f=$(ls -1t /opt/mypos/{env}/backups/*.bak 2>/dev/null | head -1); "
+               "[ -n \"$f\" ] && echo $(( ($(date +%s) - $(stat -c %Y \"$f\")) / 3600 )) || echo none")
     lines = subprocess.run(ssh.split() + [cmd], capture_output=True, text=True, timeout=60).stdout.split()
     free = lines[0].rstrip("%") if lines else ""
     add("HLT-MOD-01", "pass" if free.isdigit() and int(free) > 15 else "fail", f"{free or '?'} % disk free.")

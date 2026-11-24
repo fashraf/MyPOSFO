@@ -28,6 +28,7 @@ jobs:
         run: pip install -q -r qa/requirements.txt && python -m playwright install --with-deps chromium && python qa/run_sanity.py --suite health --out qa-out
         env:
           QA_TRIGGER: hourly health check
+          QA_TARGET: ${{ vars.DEPLOY_TARGET || 'linux' }}
       - name: Sync issues
         if: always()
         env: { GH_TOKEN: "${{ github.token }}" }

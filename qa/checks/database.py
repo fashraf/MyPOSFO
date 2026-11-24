@@ -31,10 +31,33 @@ REMOTE = (
 )
 
 
+WIN_FOLDERS = {"production": "POSprod", "staging": "POSStageing"}
+
+
+def run_windows(ssh: str, env: str) -> list[Result]:
+    folder = WIN_FOLDERS.get(env, "POSStageing")
+    cmd = (f"$f = Get-ChildItem C:\\Project\\POS\\{folder}\\backups -Filter *.dump -ErrorAction SilentlyContinue | "
+           "Sort-Object LastWriteTime -Descending | Select-Object -First 1; "
+           "if ($f) { [int]((Get-Date) - $f.LastWriteTime).TotalHours } else { 'none' }")
+    age = subprocess.run(ssh.split() + [cmd], capture_output=True, text=True, timeout=60).stdout.strip()
+    out = []
+    for cid, c in C.items():
+        if cid == "DB-MOD-04":
+            if age.isdigit():
+                out.append(Result(c, "pass" if int(age) < 26 else "fail", f"Newest backup is {age} h old."))
+            else:
+                out.append(Result(c, "fail", "No backup file on the server yet."))
+        else:
+            out.append(Result(c, "skip", "Waits for the PostgreSQL version of the database checks (comes with the API port to PostgreSQL)."))
+    return out
+
+
 def run(env: str = "staging") -> list[Result]:
     ssh = os.environ.get("QA_SSH")
     if not ssh:
         return [Result(c, "skip", "Skipped: no server access configured for this run (QA_SSH).") for c in C.values()]
+    if os.environ.get("QA_TARGET") == "windows":
+        return run_windows(ssh, env)
     sql = (Path(__file__).parent.parent / "sql" / "db-sanity.sql").read_bytes()
     p = subprocess.run(ssh.split() + [REMOTE.format(env=env)], input=sql, capture_output=True, timeout=180)
     rows = {}

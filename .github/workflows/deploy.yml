@@ -1,6 +1,7 @@
 name: Deploy web
-# develop  -> build image, deploy to STAGING, then run the full sanity QA and post the report.
-# tag v*   -> reuse the image that passed staging, wait for your approval, deploy to PRODUCTION.
+# develop  -> build, deploy to STAGING, then run the full sanity QA and post the report.
+# tag v*   -> wait for your approval, deploy the same commit to PRODUCTION.
+# Server type comes from the repository variable DEPLOY_TARGET: windows (IIS) or linux (Docker, default).
 on:
   push:
     branches: [develop]
@@ -8,7 +9,6 @@ on:
   workflow_dispatch:
     inputs:
       environment: { type: choice, options: [staging, production], default: staging }
-      tag: { description: "Image tag to deploy (e.g. sha-1a2b3c4 or v1.4.0). Empty = build this commit.", required: false }
 
 permissions:
   contents: read
@@ -17,70 +17,84 @@ permissions:
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/mypos-web
+  TARGET: ${{ vars.DEPLOY_TARGET || 'linux' }}
 
 jobs:
-  image:
+  meta:
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.t.outputs.tag }}
       environment: ${{ steps.t.outputs.environment }}
+      tag: ${{ steps.t.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
       - id: t
         run: |
-          short=sha-${GITHUB_SHA::7}
-          if [[ "${{ github.event_name }}" == workflow_dispatch ]]; then
-            { echo "environment=${{ inputs.environment }}"; echo "tag=${{ inputs.tag || '' }}"; echo "build=${{ inputs.tag == '' }}"; } >> "$GITHUB_OUTPUT"
-            [[ -n "${{ inputs.tag }}" ]] || echo "tag=$short" >> "$GITHUB_OUTPUT"
-          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            { echo "environment=production"; echo "tag=$GITHUB_REF_NAME"; echo "build=false"; } >> "$GITHUB_OUTPUT"
-          else
-            { echo "environment=staging"; echo "tag=$short"; echo "build=true"; } >> "$GITHUB_OUTPUT"
-          fi
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then echo "environment=production" >> "$GITHUB_OUTPUT"; echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else echo "environment=${{ inputs.environment || 'staging' }}" >> "$GITHUB_OUTPUT"; echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"; fi
+
+  build:
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package for Windows / IIS
+        if: env.TARGET == 'windows'
+        run: |
+          npm ci
+          VITE_DATA_SOURCE=${{ vars.FO_DATA_SOURCE || 'mock' }} VITE_APP_VERSION=${{ needs.meta.outputs.tag }} npm run build
+          echo "${{ needs.meta.outputs.tag }}" > dist/version.txt
+          (cd dist && zip -qr "../web-${{ needs.meta.outputs.tag }}.zip" .)
+      - uses: actions/upload-artifact@v4
+        if: env.TARGET == 'windows'
+        with: { name: web-package, path: "web-${{ needs.meta.outputs.tag }}.zip", retention-days: 30 }
       - uses: docker/login-action@v3
+        if: env.TARGET != 'windows'
         with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
       - uses: docker/setup-buildx-action@v3
-      - name: Build and push ${{ steps.t.outputs.tag }}
-        if: steps.t.outputs.build == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ env.IMAGE }}:${{ steps.t.outputs.tag }}
-          build-args: |
-            VITE_DATA_SOURCE=${{ vars.FO_DATA_SOURCE || 'mock' }}
-            VITE_APP_VERSION=${{ steps.t.outputs.tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Promote the image that passed staging to ${{ github.ref_name }} (no rebuild)
-        if: startsWith(github.ref, 'refs/tags/')
+        if: env.TARGET != 'windows'
+      - name: Docker image for Linux servers
+        if: env.TARGET != 'windows'
         run: |
-          if docker buildx imagetools inspect "$IMAGE:sha-${GITHUB_SHA::7}" >/dev/null 2>&1; then
-            docker buildx imagetools create -t "$IMAGE:$GITHUB_REF_NAME" "$IMAGE:sha-${GITHUB_SHA::7}"
+          src="$IMAGE:sha-${GITHUB_SHA::7}"
+          if [[ "$GITHUB_REF" == refs/tags/* ]] && docker buildx imagetools inspect "$src" >/dev/null 2>&1; then
+            docker buildx imagetools create -t "$IMAGE:$GITHUB_REF_NAME" "$src"
           else
-            echo "::warning::This commit was never deployed to staging; building it now."
-            docker buildx build --push --build-arg VITE_DATA_SOURCE=${{ vars.FO_DATA_SOURCE || 'mock' }} --build-arg VITE_APP_VERSION="$GITHUB_REF_NAME" \
-              -t "$IMAGE:$GITHUB_REF_NAME" -t "$IMAGE:sha-${GITHUB_SHA::7}" .
+            docker buildx build --push --build-arg VITE_DATA_SOURCE=${{ vars.FO_DATA_SOURCE || 'mock' }} --build-arg VITE_APP_VERSION=${{ needs.meta.outputs.tag }} \
+              -t "$IMAGE:${{ needs.meta.outputs.tag }}" -t "$src" .
           fi
 
   deploy:
-    needs: image
+    needs: [meta, build]
     runs-on: ubuntu-latest
-    environment: ${{ needs.image.outputs.environment }}   # production waits here for your Approve click
-    concurrency: { group: "deploy-${{ needs.image.outputs.environment }}", cancel-in-progress: false }
+    environment: ${{ needs.meta.outputs.environment }}   # production waits here for your Approve click
+    concurrency: { group: "deploy-${{ needs.meta.outputs.environment }}", cancel-in-progress: false }
     steps:
-      - name: Deploy web=${{ needs.image.outputs.tag }}
+      - name: Connect to the server
         run: |
           mkdir -p ~/.ssh && printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id && chmod 600 ~/.ssh/id
-          SSH="ssh -i $HOME/.ssh/id -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=20 -p ${{ secrets.DEPLOY_PORT || '22' }} ${{ secrets.DEPLOY_USER || 'root' }}@${{ secrets[format('DEPLOY_HOST_{0}', needs.image.outputs.environment)] }}"
-          echo "${{ secrets.MYPOS_BOT_TOKEN }}" | $SSH "docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin" >/dev/null
-          $SSH "DEPLOYED_BY=${{ github.actor }} /opt/mypos/bin/deploy.sh ${{ needs.image.outputs.environment }} web=${{ needs.image.outputs.tag }}"
-          echo "### ✅ Web ${{ needs.image.outputs.tag }} → ${{ needs.image.outputs.environment }}" >> "$GITHUB_STEP_SUMMARY"
+          { echo "HOST=${{ secrets.DEPLOY_USER || 'root' }}@${{ secrets[format('DEPLOY_HOST_{0}', needs.meta.outputs.environment)] }}"
+            echo "SSHO=-i $HOME/.ssh/id -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=20 -P ${{ secrets.DEPLOY_PORT || '22' }}"; } >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        if: env.TARGET == 'windows'
+        with: { name: web-package }
+      - name: Deploy web=${{ needs.meta.outputs.tag }} (Windows / IIS)
+        if: env.TARGET == 'windows'
+        run: |
+          z="web-${{ needs.meta.outputs.tag }}.zip"
+          scp $SSHO "$z" "$HOST:C:/Project/POS/artifacts/$z"
+          ssh ${SSHO/-P/-p} "$HOST" "if (-not (Test-Path C:\Project\POS\bin\deploy.ps1)) { Write-Host 'Deploy scripts missing: run MyPosAPI > Actions > Set up a server once.'; exit 1 }; powershell -NoProfile -ExecutionPolicy Bypass -File C:\Project\POS\bin\deploy.ps1 -Env ${{ needs.meta.outputs.environment }} -App web -Tag ${{ needs.meta.outputs.tag }} -Zip C:\Project\POS\artifacts\$z -By ${{ github.actor }}; exit \$LASTEXITCODE"
+      - name: Deploy web=${{ needs.meta.outputs.tag }} (Linux / Docker)
+        if: env.TARGET != 'windows'
+        run: |
+          echo "${{ secrets.MYPOS_BOT_TOKEN }}" | ssh ${SSHO/-P/-p} "$HOST" "docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin" >/dev/null
+          ssh ${SSHO/-P/-p} "$HOST" "DEPLOYED_BY=${{ github.actor }} /opt/mypos/bin/deploy.sh ${{ needs.meta.outputs.environment }} web=${{ needs.meta.outputs.tag }}"
+      - name: Summary
+        if: always()
+        run: echo "### ${{ job.status == 'success' && '✅' || '❌' }} Web ${{ needs.meta.outputs.tag }} → ${{ needs.meta.outputs.environment }} (${{ env.TARGET }})" >> "$GITHUB_STEP_SUMMARY"
 
   qa:
-    needs: [image, deploy]
-    if: needs.image.outputs.environment == 'staging'
+    needs: [meta, deploy]
+    if: needs.meta.outputs.environment == 'staging'
     uses: ./.github/workflows/qa.yml
     with:
-      trigger: "MyPOSFO ${{ needs.image.outputs.tag }}"
+      trigger: "MyPOSFO ${{ needs.meta.outputs.tag }}"
     secrets: inherit
