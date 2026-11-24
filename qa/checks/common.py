@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
-SUITE_VERSION = "1.1.0"   # bump when checks are added or changed; printed on every report
+SUITE_VERSION = "1.2.0"   # bump when checks are added or changed; printed on every report
 SEVERITIES = ("Major", "Moderate", "Minor")
 LAYER = {"Frontend": "FO", "API": "API", "Database": "DB", "Health": "Ops"}
 

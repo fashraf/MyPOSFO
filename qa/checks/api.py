@@ -14,6 +14,11 @@ C = {c.id: c for c in [
           "POST /api/auth/login answers with a normal response (no 5xx)", "POST /api/auth/login {identifier, password} for an unknown user",
           "4xx (refused) — never 5xx",
           "API · src/PosApi/Features/Access/AuthEndpoints.cs RequestOtpAsync; DB auth tables (11-api-auth-tables.sql)."),
+    Check("API-MAJ-04", "Major", "API", "Signing in with a one-time code fails",
+          "A QA owner signs in end to end: code requested, code verified, /me returns the same user",
+          "Register qa-owner@mypos.test once → POST /api/auth/login → POST /api/auth/verify (staging test code) → GET /api/auth/me",
+          "200 with tokens; /me shows qa-owner@mypos.test",
+          "API · src/PosApi/Features/Access/AuthEndpoints.cs, AuthStore.cs, Auth/OtpService.cs; staging must run with Auth__UseFixedDevOtp=true (deploy/windows/lib.ps1)."),
     Check("API-MOD-01", "Moderate", "API", "Private data is reachable without signing in",
           "Sales, catalog, tax settings and sessions refuse requests without a token (401)", "GET each private endpoint with no token",
           "401 for all",
@@ -41,6 +46,35 @@ def call(base, path, method="GET", body: bytes | None = None, headers=None):
         return e.code, e.headers.get("Content-Type", ""), e.read(2000).decode("utf-8", "replace"), time.time() - t0
     except Exception as e:  # noqa: BLE001
         return 0, "", f"{type(e).__name__}: {e}", time.time() - t0
+
+
+QA_EMAIL = "qa-owner@mypos.test"
+
+
+def sign_in(base: str) -> Result:
+    import os
+    c = C["API-MAJ-04"]
+    if os.environ.get("QA_ENV") == "production":
+        return Result(c, "skip", "Not run on production (it would create a QA business).")
+    code = os.environ.get("QA_OTP_CODE", "1234")
+    j = lambda d: json.dumps(d).encode()  # noqa: E731
+    h = {"Content-Type": "application/json"}
+    call(base, "/api/auth/register", "POST", j({"business": {"nameAr": "اختبار الجودة", "nameEn": "QA Business", "city": "Riyadh"},
+                                                "owner": {"firstName": "QA", "lastName": "Owner", "email": QA_EMAIL},
+                                                "tax": {"isVatRegistered": False}}), h)   # 200 first time, 422 email_taken after
+    st, _, body, _ = call(base, "/api/auth/login", "POST", j({"identifier": QA_EMAIL}), h)
+    try:
+        challenge = json.loads(body)["challengeId"]
+    except (ValueError, KeyError):
+        return Result(c, "fail", f"Requesting a code returned {st}: {body[:120]}")
+    st, _, body, _ = call(base, "/api/auth/verify", "POST", j({"challengeId": challenge, "code": code}), h)
+    if st != 200:
+        return Result(c, "fail", f"Verifying the code returned {st}: {body[:120]} (is Auth__UseFixedDevOtp on for staging?)")
+    token = json.loads(body).get("accessToken", "")
+    st, _, body, _ = call(base, "/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    if st == 200 and QA_EMAIL in body:
+        return Result(c, "pass", f"Signed in as {QA_EMAIL}; /me answered 200.")
+    return Result(c, "fail", f"Signed in, but /me returned {st}: {body[:120]}")
 
 
 def run(base: str) -> list[Result]:
@@ -82,6 +116,8 @@ def run(base: str) -> list[Result]:
             open_ones.append(f"{path} → {st}")
     add("API-MOD-01", "fail" if open_ones else "pass",
         ("Without signing in, these answered instead of refusing: " + ", ".join(open_ones) + ".") if open_ones else f"All {len(PROTECTED)} private endpoints refuse anonymous requests.")
+
+    out.append(sign_in(base))
 
     st, _, body, _ = call(base, "/api/auth/login", "POST", b"{not json", {"Content-Type": "application/json"})
     add("API-MOD-02", "fail" if st >= 500 else "pass", f"Malformed JSON returned {st}.")
