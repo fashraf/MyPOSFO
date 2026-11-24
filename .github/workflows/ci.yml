@@ -15,3 +15,16 @@ jobs:
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with: { name: web-dist, path: dist }
+      - name: Docker image builds
+        run: docker build -t mypos-web:ci .
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Front-end sanity on the built app (mock data)
+        run: |
+          pip install -q -r qa/requirements.txt && python -m playwright install --with-deps chromium
+          npx vite preview --port 4173 --strictPort &
+          npx wait-on http://localhost:4173 -t 60000
+          python qa/run_sanity.py --base http://localhost:4173 --env ci --only frontend --out qa-out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: ci-sanity-report, path: qa-out/ }

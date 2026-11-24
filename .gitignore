@@ -7,3 +7,5 @@ dist/
 .env.*.local
 playwright-report/
 test-results/
+qa-out/
+__pycache__/

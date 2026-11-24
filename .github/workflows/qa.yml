@@ -1,0 +1,51 @@
+name: Sanity QA
+# Runs the complete sanity suite against STAGING: database, API and front end (desktop + phone).
+# Produces the issue report (PDF), opens/updates one GitHub issue per finding, and closes issues that are fixed.
+on:
+  workflow_call:
+    inputs:
+      trigger: { type: string, required: false, default: "manual" }
+  workflow_dispatch:
+    inputs:
+      trigger: { description: "Why (shown on the report)", required: false, default: "manual run" }
+  repository_dispatch:
+    types: [qa-run]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    concurrency: { group: qa-staging, cancel-in-progress: true }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install Playwright
+        run: pip install -q -r qa/requirements.txt && python -m playwright install --with-deps chromium
+      - name: Server access (for database checks)
+        run: |
+          mkdir -p ~/.ssh && printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id && chmod 600 ~/.ssh/id
+          echo "QA_SSH=ssh -i $HOME/.ssh/id -o StrictHostKeyChecking=accept-new -p ${{ secrets.DEPLOY_PORT || '22' }} ${{ secrets.DEPLOY_USER || 'root' }}@${{ secrets.DEPLOY_HOST_STAGING }}" >> "$GITHUB_ENV"
+      - name: Run sanity suite
+        env:
+          QA_BASE_URL: ${{ vars.STAGING_URL || format('http://{0}:8080', secrets.DEPLOY_HOST_STAGING) }}
+          QA_TRIGGER: ${{ inputs.trigger || github.event.client_payload.trigger || 'manual' }}
+          QA_ENV: staging
+        run: python qa/run_sanity.py --out qa-out
+      - name: Sync GitHub issues (open new, close fixed)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python qa/sync_issues.py qa-out/findings.json --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanity-report-${{ github.run_number }}
+          path: qa-out/
+      - name: Summary
+        if: always()
+        run: cat qa-out/summary.md >> "$GITHUB_STEP_SUMMARY" || true

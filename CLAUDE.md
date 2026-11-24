@@ -17,6 +17,13 @@ Backend lives in `fashraf/MyPosAPI`. Super admin (`MyPosSA`) comes later.
 7. Merging to `develop` deploys to **staging**. Production only from a release tag on `main` after Fahad approves.
 8. Never push to `main` or `develop` directly. Never commit secrets or `.env.local`.
 
+## Deploy, rollback, QA (how it works)
+- Merge to `develop` → `Deploy web` builds `ghcr.io/fashraf/mypos-web:sha-xxxxxxx`, deploys to staging over SSH, then `Sanity QA` runs.
+- Sanity QA (`qa/`) checks database, API and front end (desktop + 360×720), writes the PDF report and opens/closes one
+  GitHub issue per finding (`[WEB-MAJ-04] …`). When fixing, reference the ID; the next run closes the issue by itself.
+- New checks: add to `qa/checks/*.py` with a new fixed ID; never reuse an ID.
+- Server address lives only in the repo secrets `DEPLOY_HOST_STAGING` / `DEPLOY_HOST_PRODUCTION`. Rollback: Actions → Rollback.
+
 ## Conventions
 - Every user-visible number is numeric: invoice (100001+), order no. (restarts at 1 per session),
   credit note (500001+), receipt (700001+), session, employee ID.
