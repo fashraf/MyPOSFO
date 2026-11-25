@@ -40,7 +40,7 @@ jobs:
         if: env.TARGET == 'windows'
         run: |
           npm ci
-          VITE_DATA_SOURCE=${{ vars.FO_DATA_SOURCE || 'mock' }} VITE_APP_VERSION=${{ needs.meta.outputs.tag }} npm run build
+          VITE_DATA_SOURCE=${{ vars.FO_DATA_SOURCE || 'mock' }} VITE_DEMO_TOOLS=${{ vars.FO_DEMO_TOOLS || 'false' }} VITE_APP_VERSION=${{ needs.meta.outputs.tag }} npm run build
           echo "${{ needs.meta.outputs.tag }}" > dist/version.txt
           (cd dist && zip -qr "../web-${{ needs.meta.outputs.tag }}.zip" .)
       - uses: actions/upload-artifact@v4
