@@ -24,6 +24,11 @@ Backend lives in `fashraf/MyPosAPI`. Super admin (`MyPosSA`) comes later.
 - New checks: add to `qa/checks/*.py` with a new fixed ID; never reuse an ID.
 - Server address lives only in the repo secrets `DEPLOY_HOST_STAGING` / `DEPLOY_HOST_PRODUCTION`. Rollback: Actions → Rollback.
 
+## Data modes
+- `VITE_DATA_SOURCE`: `mock` (browser only), `hybrid` (staging default: sign-in, catalog, restaurant sessions, sales and
+  audit through the server; other modules still in the browser database of `VITE_TENANT_ID`), `api` (everything server).
+- Hybrid wrappers live in `src/services/hybrid/`. Moving a module to the server = port its API (MyPosAPI) + add a wrapper.
+
 ## Conventions
 - Every user-visible number is numeric: invoice (100001+), order no. (restarts at 1 per session),
   credit note (500001+), receipt (700001+), session, employee ID.

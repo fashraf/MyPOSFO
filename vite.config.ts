@@ -31,7 +31,8 @@ export default defineConfig(({ mode }) => {
     dataSource === 'api' || dataSource === 'hybrid'
       ? {
           /* Same-origin /api in development: no CORS, no mixed content. */
-          '/api': {
+          /* Exactly /api and /api/…: the page /api-performance belongs to the app, not the server. */
+          '^/api(/|$)': {
             target: apiTarget,
             changeOrigin: true,
             secure: false,

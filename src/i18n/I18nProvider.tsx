@@ -15,6 +15,7 @@ import {
   type Direction,
   type Language,
 } from './config';
+import { setApiLanguage } from '@/services/apiClient';
 import { ar } from './locales/ar';
 import { en, type Dictionary } from './locales/en';
 
@@ -89,6 +90,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.lang = language;
     root.dir = direction;
+    /* Server messages come in both languages; the API client picks the one on screen. */
+    setApiLanguage(language);
     try {
       window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     } catch {

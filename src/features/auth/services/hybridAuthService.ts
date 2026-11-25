@@ -2,6 +2,8 @@ import { HYBRID_TENANT } from '@/config/env';
 import { activateTenant } from '@/services/mock/db';
 import { setCurrentMockUser } from '@/services/mock/sessionRef';
 import { HttpError } from '@/services/http';
+import { refreshSession } from '@/services/apiClient';
+import { tokenStore } from '@/services/tokenStore';
 import type { AuthSession } from '../types/auth.types';
 import { apiAuthService } from './apiAuthService';
 
@@ -23,6 +25,9 @@ export const hybridAuthService: typeof apiAuthService = {
   ...apiAuthService,
 
   async restore() {
+    /* After a page load the access token is gone (memory only) but the refresh token remains: renew first, so the
+       first call is not a 401 in the console on every reload. */
+    if (!tokenStore.getAccessToken() && tokenStore.getRefreshToken()) await refreshSession();
     const session = await apiAuthService.restore();
     return session ? attach(session) : null;
   },

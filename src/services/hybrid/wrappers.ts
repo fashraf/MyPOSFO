@@ -134,14 +134,9 @@ export function hybridCatalog<T extends AnyService>(base: T): T {
     activate: write('activate'),
     deactivate: write('deactivate'),
     setCost: write('setCost'),
-    async adjustStock(...args: unknown[]) {
-      await syncCatalog();
-      return serverBacked(
-        () => base.adjustStock(...args) as Promise<CatalogItem>,
-        (local) => saveCatalogItem({ ...local, setStock: true } as unknown as CatalogItem),
-        () => syncCatalog(true),
-      );
-    },
+    /* adjustStock is NOT pushed: during a sale the local inventory step calls it, and pushing that local figure
+       overwrote the server's stock (60 became -1). Sales move stock on the server, inside the sale transaction; the
+       next catalog sync shows the server's figure. Stock-screen adjustments move to the server with the inventory slice. */
   } as T;
 }
 
