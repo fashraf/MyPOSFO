@@ -1,3 +1,4 @@
+import { CREDIT_SALES, CUSTOMERS } from '@/config/features';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
@@ -72,7 +73,8 @@ const MODES: { value: PaymentMode; icon: typeof Banknote }[] = [
   { value: 'cash', icon: Banknote },
   { value: 'card', icon: CreditCard },
   { value: 'mixed', icon: Layers },
-  { value: 'credit', icon: UserCheck },
+  /* Credit (on account) only when credit sales are switched on in config/features.ts. */
+  ...(CREDIT_SALES ? [{ value: 'credit' as const, icon: UserCheck }] : []),
 ];
 
 /** Days since a date, or null when there is none. */
@@ -368,6 +370,7 @@ export function CheckoutModal({
 
             {/* Two tabs rather than a dropdown with a blank option: a walk-in
                 sale is a deliberate choice, not the absence of one. */}
+            {CUSTOMERS && (
             <div className="grid shrink-0 grid-cols-2 gap-1 rounded-md bg-ink-100 p-1">
               {(['walkin', 'customer'] as const).map((tab) => (
                 <button
@@ -388,8 +391,9 @@ export function CheckoutModal({
                 </button>
               ))}
             </div>
+            )}
 
-            {customerTab === 'walkin' ? (
+            {!CUSTOMERS || customerTab === 'walkin' ? (
               <div className="rounded-md border border-dashed border-ink-300 px-3 py-6 text-center">
                 <UserRound aria-hidden className="mx-auto h-5 w-5 text-ink-300" />
                 <p className="mt-1.5 text-sm font-medium text-ink-700">

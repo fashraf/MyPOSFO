@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY, SERVER_CORE } from '@/config/env';
 import type {
   Category,
   CatalogItem,
@@ -850,5 +851,54 @@ export function seedFor(tenantId: string | null | undefined): TenantSeed {
   /* Recipes live with the catalog item; the ingredient list is its own slice. */
   const recipes = recipesFor(id);
   seed.catalog = seed.catalog.map((item) => (recipes[item.id] ? { ...item, recipe: recipes[item.id] } : item));
-  return { ...seed, ingredients: ingredientsFor(id, seed.branches.map((b) => b.id)) };
+  const full = { ...seed, ingredients: ingredientsFor(id, seed.branches.map((b) => b.id)) };
+  if (SAMPLE_ACTIVITY) return full;
+  const clean = cleanStart(full);
+  return SERVER_CORE ? integerIds(clean) : clean;
+}
+
+/**
+ * Hybrid mode: the server's primary keys are integers (branch 1, user 1, item 1 …). The same records here get the same
+ * numbers, and every reference to them follows, so the browser database and the server agree.
+ * Role ids stay as codes (rol_owner …): the program refers to them by name.
+ */
+function integerIds(seed: TenantSeed): TenantSeed {
+  const map = new Map<string, string>();
+  const number = (list: { id: string }[] | undefined) => (list ?? []).forEach((row, index) => map.set(row.id, String(index + 1)));
+  number(seed.branches);
+  number(seed.users);
+  number(seed.categories);
+  number((seed as unknown as { printGroups?: { id: string }[] }).printGroups);
+  number(seed.catalog);
+  const walk = (value: unknown): unknown => {
+    if (typeof value === 'string') return map.get(value) ?? value;
+    if (Array.isArray(value)) return value.map(walk);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [map.get(key) ?? key, walk(inner)]));
+    }
+    return value;
+  };
+  return walk(seed) as TenantSeed;
+}
+
+/**
+ * Server builds start clean: the pages all stay, but customers (and so customers on credit), components (ingredients)
+ * start empty, and the business has one branch. Items, combos, categories, users, roles and settings are kept.
+ */
+function cleanStart(seed: TenantSeed): TenantSeed {
+  const first = seed.branches[0];
+  const only = first ? [first] : [];
+  const keep = new Set(only.map((b) => b.id));
+  return {
+    ...seed,
+    branches: only,
+    customers: [],
+    ingredients: [],
+    catalog: seed.catalog.map((item) => ({ ...item, recipe: [] })),
+    users: seed.users.map((user) => ({
+      ...user,
+      branchIds: user.branchIds.filter((b: string) => keep.has(b)),
+      defaultBranchId: user.defaultBranchId && keep.has(user.defaultBranchId) ? user.defaultBranchId : (first?.id ?? null),
+    })),
+  };
 }

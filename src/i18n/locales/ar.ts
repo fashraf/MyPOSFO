@@ -7,6 +7,8 @@ import type { Dictionary } from './en';
 export const ar: Dictionary = {
   common: {
     appName: 'بوس كومبليت',
+    refresh: 'تحديث',
+    refreshing: 'جارٍ التحديث…',
     search: 'بحث',
     searchPlaceholder: 'ابحث…',
     save: 'حفظ',

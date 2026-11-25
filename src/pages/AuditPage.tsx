@@ -1,17 +1,21 @@
+import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, ShieldAlert, ShieldCheck, ShieldX } from 'lucide-react';
+import { Database, Eye, GitCompare, Hash, MapPin, ShieldAlert, ShieldCheck, ShieldX, Table2, UserRound, X } from 'lucide-react';
+import { useI18n } from '@/i18n';
+import { exactTime, relativeTime } from '@/lib/relativeTime';
 import {
   Badge,
   Button,
   DatePicker,
   PageHeader,
+  RefreshButton,
   Pagination,
   SearchInput,
   Select,
 } from '@/components/ui';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useToast } from '@/contexts/ToastContext';
-import { type AuditRow } from '@/services/api';
+import { auditApi as serverAudit, type AuditRow } from '@/services/api';
 import { auditService as auditApi } from '@/services/auditService';
 
 /**
@@ -108,6 +112,7 @@ export default function AuditPage() {
       <PageHeader
         title="Audit trail"
         description="Every change, who made it, and where they made it from."
+        actions={<RefreshButton onRefresh={load} />}
       />
 
       <div className="flex flex-wrap items-end gap-3">
@@ -223,123 +228,153 @@ export default function AuditPage() {
         onPageChange={setPage}
       />
 
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-             onClick={() => setDetail(null)}>
-          {/* Four fifths of the viewport. */}
-          <div className="flex h-[80vh] w-[80vw] flex-col rounded-lg bg-white p-6"
-               onClick={(event) => event.stopPropagation()}>
-            <div className="flex items-start justify-between gap-4 border-b border-ink-200 pb-3">
-              <div>
-                <h2 className="text-lg font-semibold text-ink-900">
-                  {String(detail.entry.action)} · {String(detail.entry.module)}
-                </h2>
-                <p className="text-sm text-ink-500">
-                  {String(detail.entry.username ?? 'unknown')} ·{' '}
-                  {new Date(String(detail.entry.occurredAtUtc)).toLocaleString()}
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setDetail(null)}>Close</Button>
-            </div>
-
-            <div className="grid min-h-0 flex-1 gap-6 overflow-auto pt-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-              <div className="space-y-5">
-                <Section title="Request">
-                  <Pair label="API" value={`${detail.entry.httpMethod} ${detail.entry.apiPath}`} mono />
-                  <Pair label="Page" value={String(detail.entry.currentPage ?? '—')} />
-                  <Pair label="Came from" value={String(detail.entry.previousPage ?? '—')} />
-                  <Pair label="Result" value={String(detail.entry.result)} />
-                  <Pair label="Record" value={String(detail.entry.entityId ?? '—')} mono />
-                  <Pair label="Role" value={String(detail.entry.roleId ?? '—')} />
-                  <Pair label="From" value={String(detail.entry.ipAddress ?? '—')} mono />
-                  <Pair label="Correlation" value={String(detail.entry.correlationId ?? '—')} mono />
-                </Section>
-
-                {detail.timing && (
-                  <Section title="Timing">
-                    <Pair label="Total" value={`${detail.timing.totalMs} ms`} />
-                    <Pair label="Database" value={`${detail.timing.databaseMs} ms`} />
-                    <Pair label="Queries" value={String(detail.timing.queryCount)} />
-                  </Section>
-                )}
-
-                <Section title="Tables touched">
-                  {detail.tables.length === 0 ? (
-                    <p className="text-sm text-ink-400">None — this call only read.</p>
-                  ) : detail.tables.map((t) => (
-                    <div key={`${t.fullName}-${t.operation}`} className="flex justify-between gap-2">
-                      <span className="font-mono text-xs">{t.fullName}</span>
-                      <Badge tone={t.operation === 'INSERT' ? 'success' : 'info'}>
-                        {t.operation}{t.rowsAffected ? ` ×${t.rowsAffected}` : ''}
-                      </Badge>
-                    </div>
-                  ))}
-                </Section>
-              </div>
-
-              <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">Changes</h3>
-                {detail.changes.length === 0 ? (
-                  <p className="text-sm text-ink-400">
-                    Nothing recorded. Either the call changed nothing, or this
-                    handler does not yet report its changes.
-                  </p>
-                ) : (
-                  <div className="overflow-hidden rounded-lg border border-ink-200">
-                    <table className="w-full text-sm">
-                      <thead className="bg-ink-50 text-2xs uppercase text-ink-500">
-                        <tr>
-                          <th className="px-3 py-2 text-start">Table</th>
-                          <th className="px-3 py-2 text-start">Row (PK)</th>
-                          <th className="px-3 py-2 text-start">Field</th>
-                          <th className="px-3 py-2 text-start">Was</th>
-                          <th className="px-3 py-2 text-start">Became</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-ink-100">
-                        {detail.changes.map((c) => (
-                          <tr key={c.changeId}>
-                            <td className="px-3 py-2 font-mono text-xs">
-                              {c.schemaName}.{c.tableName}
-                              {c.foreignTable && (
-                                <span className="block text-2xs text-ink-400">
-                                  FK → {c.foreignTable} {c.foreignKey}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 font-mono text-xs">{c.primaryKey ?? '—'}</td>
-                            <td className="px-3 py-2">{c.columnName ?? c.operation}</td>
-                            <td className="px-3 py-2 text-ink-500">{c.oldValue ?? '—'}</td>
-                            <td className="px-3 py-2 font-medium text-ink-900">{c.newValue ?? '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {detail && <AuditDetailModal detail={detail as unknown as AuditDetail} onClose={() => setDetail(null)} />}
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+type AuditDetail = Awaited<ReturnType<typeof serverAudit.detail>>;
+
+/** One audit entry, laid out as cards: what happened, who, where, timing, tables, changes and the queries run. */
+function AuditDetailModal({ detail, onClose }: { detail: AuditDetail; onClose: () => void }) {
+  const { language } = useI18n();
+  const e = detail.entry as Record<string, unknown>;
+  const ok = String(e.result) === 'success';
+  const text = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v));
+  return createPortal(
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-3 sm:p-6" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-ink-50 shadow-xl" onClick={(event) => event.stopPropagation()}>
+        <header className="flex items-start justify-between gap-3 border-b border-ink-200 bg-surface px-5 py-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md bg-ink-900 px-2 py-0.5 text-xs font-semibold text-white">{text(e.action)}</span>
+              <span className="text-sm text-ink-600">{text(e.module)}</span>
+              <Badge tone={ok ? 'success' : 'danger'}>{ok ? 'Success' : text(e.result)}</Badge>
+            </div>
+            <p className="mt-1 text-xs text-ink-500">
+              {exactTime(String(e.occurredAtUtc), language)} · {relativeTime(String(e.occurredAtUtc), language)}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100"><X className="h-4 w-4" /></button>
+        </header>
+
+        <div className="space-y-4 overflow-y-auto p-4 sm:p-5">
+          {detail.timing && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Tile label="Total time" value={`${detail.timing.totalMs} ms`} />
+              <Tile label="Database" value={`${detail.timing.databaseMs} ms`} />
+              <Tile label="Queries" value={String(detail.timing.queryCount)} />
+              <Tile label="Status" value={text(e.statusCode)} tone={ok ? undefined : 'bad'} />
+            </div>
+          )}
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <Card title="Who" icon={<UserRound className="h-4 w-4" />}>
+              <Row label="User" value={text(e.username)} />
+              <Row label="Role" value={text(e.roleId)} />
+              <Row label="Branch" value={text(e.branchId)} />
+              <Row label="From" value={text(e.ipAddress)} mono />
+            </Card>
+            <Card title="Where" icon={<MapPin className="h-4 w-4" />}>
+              <Row label="API" value={`${text(e.httpMethod)} ${text(e.apiPath)}`} mono />
+              <Row label="Page" value={text(e.currentPage)} mono />
+              <Row label="Came from" value={text(e.previousPage)} mono />
+            </Card>
+            <Card title="Record" icon={<Hash className="h-4 w-4" />}>
+              <Row label="Type" value={text(e.entityType)} />
+              <Row label="Id" value={text(e.entityId)} mono />
+              <Row label="Reference" value={text(e.correlationId)} mono />
+              {e.errorMessage ? <p className="mt-1 rounded bg-danger-50 px-2 py-1 text-xs text-danger-700">{String(e.errorMessage)}</p> : null}
+            </Card>
+          </div>
+
+          <Card title={`Tables touched (${detail.tables.length})`} icon={<Table2 className="h-4 w-4" />}>
+            {detail.tables.length === 0 ? (
+              <p className="text-sm text-ink-500">None: this call only read data.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {detail.tables.map((t) => (
+                  <span key={`${t.fullName}-${t.operation}`} className="inline-flex items-center gap-2 rounded-md border border-ink-200 bg-ink-50 px-2.5 py-1 text-xs">
+                    <span className="font-mono">{t.fullName}</span>
+                    <Badge tone={t.operation === 'INSERT' ? 'success' : t.operation === 'DELETE' ? 'danger' : 'info'}>
+                      {t.operation}{t.rowsAffected ? ` ×${t.rowsAffected}` : ''}
+                    </Badge>
+                  </span>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card title={`Changes (${detail.changes.length})`} icon={<GitCompare className="h-4 w-4" />}>
+            {detail.changes.length === 0 ? (
+              <p className="text-sm text-ink-500">Nothing recorded: the call changed nothing, or this screen does not report its changes yet.</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {detail.changes.map((c) => (
+                  <div key={c.changeId} className="rounded-lg border border-ink-200 p-3">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="font-mono text-ink-700">{c.schemaName}.{c.tableName}{c.primaryKey ? ` #${c.primaryKey}` : ''}</span>
+                      <Badge tone="info">{c.columnName ?? c.operation}</Badge>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                      <div className="rounded bg-danger-50/60 px-2 py-1"><p className="text-2xs uppercase text-ink-500">Was</p><p className="break-all text-ink-700">{c.oldValue ?? '—'}</p></div>
+                      <div className="rounded bg-success-50/60 px-2 py-1"><p className="text-2xs uppercase text-ink-500">Became</p><p className="break-all font-medium text-ink-900">{c.newValue ?? '—'}</p></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card title={`Queries run (${detail.queries?.length ?? 0})`} icon={<Database className="h-4 w-4" />}>
+            {!detail.queries || detail.queries.length === 0 ? (
+              <p className="text-sm text-ink-500">No database statements recorded for this request.</p>
+            ) : (
+              <ol className="space-y-2">
+                {detail.queries.map((q) => (
+                  <li key={q.seq}>
+                    <div className="mb-1 flex items-center justify-between text-xs text-ink-500">
+                      <span className="font-semibold text-ink-700">#{q.seq}</span>
+                      <span>{q.rowsAffected >= 0 ? `${q.rowsAffected} rows · ` : ''}{q.durationMs} ms</span>
+                    </div>
+                    <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md bg-ink-900 px-3 py-2 font-mono text-2xs leading-relaxed text-ink-50">{q.commandText}</pre>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Card>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">{title}</h3>
-      <div className="space-y-1 text-sm">{children}</div>
+    <section className="rounded-xl border border-ink-200 bg-surface p-4">
+      <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-500">
+        <span className="text-ink-400">{icon}</span>{title}
+      </h3>
+      <div className="space-y-1.5 text-sm">{children}</div>
     </section>
   );
 }
 
-function Pair({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex justify-between gap-3">
-      <span className="text-ink-500">{label}</span>
-      <span className={mono ? 'truncate font-mono text-xs' : 'truncate'}>{value}</span>
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="shrink-0 text-ink-500">{label}</span>
+      <span className={mono ? 'truncate font-mono text-xs text-ink-900' : 'truncate text-ink-900'} title={value}>{value}</span>
+    </div>
+  );
+}
+
+function Tile({ label, value, tone }: { label: string; value: string; tone?: 'bad' }) {
+  return (
+    <div className="rounded-xl border border-ink-200 bg-surface px-4 py-3">
+      <p className="text-2xs uppercase tracking-wide text-ink-500">{label}</p>
+      <p className={tone === 'bad' ? 'mt-0.5 text-xl font-semibold text-danger-700' : 'mt-0.5 text-xl font-semibold tabular-nums text-ink-900'}>{value}</p>
     </div>
   );
 }

@@ -100,7 +100,7 @@ registerSlice('sales', {
     const seed = seedFor(tenantId);
     const history = SAMPLE_ACTIVITY
       ? generateHistory(tenantId, seed)
-      : { sales: [], invoiceSequence: 100000, chain: { icv: 0, lastHash: GENESIS_PIH } };
+      : { sales: [], invoiceSequence: 0, chain: { icv: 0, lastHash: GENESIS_PIH } };
     sales = history.sales;
     customers = seed.customers;
     invoiceSequence = history.invoiceSequence;

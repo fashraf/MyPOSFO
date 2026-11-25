@@ -1,3 +1,4 @@
+import { CREDIT_SALES } from '@/config/features';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, Banknote, CircleDollarSign, CreditCard, PackageOpen, Percent, Receipt, ShoppingBag, TrendingUp, Users, Wallet, Download } from 'lucide-react';
@@ -23,6 +24,7 @@ import {
   InfoHint,
   KpiCard,
   PageHeader,
+  RefreshButton,
   SkeletonCards,
   Tabs, toCsv } from '@/components/ui';
 import { useSession } from '@/contexts/SessionContext';
@@ -184,6 +186,7 @@ export default function DashboardPage() {
         description={t('dashboard.greeting.subtitle')}
         actions={
           <div className="flex w-full items-center gap-2 sm:w-auto">
+          <RefreshButton onRefresh={load} />
           <Tabs
             className="min-w-0 flex-1 sm:flex-none"
             variant="pill"
@@ -279,7 +282,10 @@ export default function DashboardPage() {
         two are never read as the same thing — an owner looking at a healthy
         sales figure can still be short of cash this week.
       */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
+      <div className={cn("grid grid-cols-2 gap-2 sm:gap-4", CREDIT_SALES ? "lg:grid-cols-4" : "lg:grid-cols-2")}>
+        {/* Customer credit is switched off (config/features.ts). */}
+        {CREDIT_SALES && (
+        <>
         <KpiCard
           onClick={() => navigate(ROUTES.customers)}
           label={t('dashboard.money.owed')}
@@ -305,6 +311,9 @@ export default function DashboardPage() {
           hint={t('dashboard.money.overdueHint')}
           icon={<AlertTriangle />}
         />
+
+        </>
+        )}
 
         <KpiCard
           onClick={() => navigate(ROUTES.finance)}
@@ -506,6 +515,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </ChartCard>
 
+            {CREDIT_SALES && (
             <ChartCard
               title="Money owed, by age"
               description="Unpaid credit sales grouped by how long they have been outstanding. A single total hides the four-month debt behind yesterday's."
@@ -542,6 +552,7 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
+            )}
 
             <ChartCard
               title="Card money, settled and waiting"
@@ -679,6 +690,7 @@ export default function DashboardPage() {
                 </div>
               </section>
 
+              {CREDIT_SALES && (
               <section className="rounded-lg border border-ink-200 bg-surface p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -710,6 +722,7 @@ export default function DashboardPage() {
                   </Link>
                 )}
               </section>
+              )}
             </div>
           </div>
 

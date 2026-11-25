@@ -1,3 +1,4 @@
+import { isRemovedPath } from '@/config/features';
 import { Suspense, lazy, type ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from '@/components/layout';
@@ -87,6 +88,11 @@ function Page({ children }: { children: ReactNode }) {
  * Public routes sit outside the app shell. Everything else is behind
  * <ProtectedRoute>, so adding a page cannot accidentally leave it unguarded.
  */
+/** Drops the routes of features switched off in config/features.ts. */
+function withoutRemoved<T extends { path?: string }>(routes: T[]): T[] {
+  return routes.filter((route) => !route.path || !isRemovedPath(route.path));
+}
+
 export const router = createBrowserRouter([
   {
     element: <PublicOnlyRoute />,
@@ -107,6 +113,7 @@ export const router = createBrowserRouter([
         path: '/',
         element: <AppLayout />,
         children: [{ element: <RequireAccess />, children: [
+          ...withoutRemoved([
           { index: true, element: <HomeRedirect /> },
           { path: ROUTES.zatca.slice(1), element: <Page><ZatcaPage /></Page> },
           { path: ROUTES.dashboard.slice(1), element: <Page><DashboardPage /></Page> },
@@ -170,6 +177,7 @@ export const router = createBrowserRouter([
           { path: 'roles/:id/edit', element: <Page><RoleFormPage mode="edit" /></Page> },
           { path: ROUTES.components.slice(1), element: <Page><ComponentsPage /></Page> },
           { path: '*', element: <Page><NotFoundPage /></Page> },
+          ]),
         ] }],
       },
     ],

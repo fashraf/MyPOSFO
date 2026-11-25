@@ -19,7 +19,7 @@ export {
 export type { DrawerExpectation, DayTakings } from './financeApi';
 
 export { auditApi } from './auditApi';
-export type { AuditRow, EndpointPerformance } from './auditApi';
+export type { AuditRow, EndpointPerformance, QueryRun, RequestRun } from './auditApi';
 
 export { activationApi, DeactivationBlocked } from './activationApi';
 export type { ActivatableEntity } from './activationApi';

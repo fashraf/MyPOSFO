@@ -17,9 +17,11 @@ import { useI18n } from '@/i18n';
 
 export interface HeaderProps {
   onOpenMobileNav: () => void;
+  /** Desktop: fold or unfold the side menu. */
+  onToggleSidebar?: () => void;
 }
 
-export function Header({ onOpenMobileNav }: HeaderProps) {
+export function Header({ onOpenMobileNav, onToggleSidebar }: HeaderProps) {
   const { t } = useTranslation();
   const { language } = useI18n();
   const {
@@ -107,11 +109,12 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
     <header className="sticky top-0 z-header flex h-14 shrink-0 items-center gap-1.5 border-b border-ink-200 bg-surface/90 px-3 backdrop-blur-md sm:gap-2 sm:px-5 print:hidden">
       <button
         type="button"
-        onClick={onOpenMobileNav}
+        onClick={() => (onToggleSidebar && window.matchMedia('(min-width: 1024px)').matches ? onToggleSidebar() : onOpenMobileNav())}
         aria-label={t('nav.openMenu')}
-        className="-ms-1 hidden h-10 w-10 place-items-center rounded-md text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900 md:grid lg:hidden"
+        data-testid="menu-toggle"
+        className="-ms-1 hidden h-8 w-8 place-items-center rounded-md text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900 md:grid"
       >
-        <Menu aria-hidden className="h-5 w-5" />
+        <Menu aria-hidden className="h-4 w-4" />
       </button>
 
       {crumb && (

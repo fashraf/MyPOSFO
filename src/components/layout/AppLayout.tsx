@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { PrintOnCompletion } from '@/features/printing/PrintOnCompletion';
@@ -25,6 +26,10 @@ export function AppLayout() {
   const location = useLocation();
   const roomy = useMediaQuery('(min-width: 1440px)');
   const tightTill = location.pathname.startsWith('/pos') && !roomy;
+  /* On a tight till the menu starts folded; the burger at the top unfolds it for this visit. */
+  const [tillMenuOpen, setTillMenuOpen] = useState(false);
+  const folded = tightTill ? !tillMenuOpen : collapsed;
+  const toggleSidebar = () => (tightTill ? setTillMenuOpen((open) => !open) : setCollapsed((value) => !value));
 
   return (
     /* `pt-safe`: in a standalone (installed) app the status bar overlays the
@@ -40,8 +45,8 @@ export function AppLayout() {
       </a>
 
       <Sidebar
-        collapsed={isDesktop ? collapsed || tightTill : false}
-        onToggleCollapsed={() => setCollapsed((value) => !value)}
+        collapsed={isDesktop ? folded : false}
+        onToggleCollapsed={toggleSidebar}
         mobileOpen={mobileNav.isOpen}
         onCloseMobile={mobileNav.close}
       />
@@ -52,7 +57,7 @@ export function AppLayout() {
           it never scrolls away and a page's own `h-full` (the till) ends above it. */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-ink-50 lg:my-2 lg:me-2 lg:rounded-xl lg:border lg:border-ink-200 lg:shadow-xs">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain px-safe">
-          <Header onOpenMobileNav={mobileNav.open} />
+          <Header onOpenMobileNav={mobileNav.open} onToggleSidebar={toggleSidebar} />
 
           <main id="main-content" className="min-h-0 flex-1 px-3 py-3 sm:px-5 sm:py-5">
             <div className="mx-auto h-full w-full max-w-[1600px]">
