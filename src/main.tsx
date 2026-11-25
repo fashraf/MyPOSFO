@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { lockViewport } from '@/lib/lockViewport';
 
 /* Self-hosted fonts. Nothing is fetched from a CDN, so the app looks right
    offline, on a LAN-only Sunmi terminal, and behind a corporate firewall. */
@@ -20,6 +21,8 @@ const container = document.getElementById('root');
 if (!container) {
   throw new Error('Root element #root is missing from index.html.');
 }
+
+lockViewport();
 
 createRoot(container).render(
   <StrictMode>

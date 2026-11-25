@@ -75,7 +75,15 @@ jobs:
           { echo "HOST=${{ secrets.DEPLOY_USER || 'root' }}@${{ secrets[format('DEPLOY_HOST_{0}', needs.meta.outputs.environment)] }}"
             echo "SSHO=-i $HOME/.ssh/id -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=20 -P ${{ secrets.DEPLOY_PORT || '22' }}"; } >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
+        id: dl1
         if: env.TARGET == 'windows'
+        continue-on-error: true   # the artifact store is sometimes a few seconds behind the upload
+        with: { name: web-package }
+      - name: Wait and retry the package download
+        if: env.TARGET == 'windows' && steps.dl1.outcome == 'failure'
+        run: sleep 30
+      - uses: actions/download-artifact@v4
+        if: env.TARGET == 'windows' && steps.dl1.outcome == 'failure'
         with: { name: web-package }
       - name: Deploy web=${{ needs.meta.outputs.tag }} (Windows / IIS)
         if: env.TARGET == 'windows'
