@@ -303,3 +303,31 @@
     break-inside: avoid;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The app behaves like an installed app on phones and tills: the page itself
+   never zooms, slides sideways or pulls down to refresh. Lists inside the app
+   still scroll normally.
+   --------------------------------------------------------------------------- */
+@layer base {
+  html,
+  body {
+    overscroll-behavior: none;   /* no pull-to-refresh, no rubber-band bounce */
+    touch-action: manipulation;  /* no double-tap zoom; taps fire immediately */
+    overflow-x: hidden;          /* the page cannot be dragged sideways */
+    -webkit-text-size-adjust: 100%;
+  }
+  #root {
+    overscroll-behavior: none;
+  }
+}
+
+/* iPhone zooms into any field with text under 16px when it is tapped. Outside the layers and !important, so the
+   screens' own text-size classes cannot undo it on phones and tablets. */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
