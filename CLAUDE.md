@@ -30,7 +30,7 @@ Backend lives in `fashraf/MyPosAPI`. Super admin (`MyPosSA`) comes later.
 - Hybrid wrappers live in `src/services/hybrid/`. Moving a module to the server = port its API (MyPosAPI) + add a wrapper.
 
 ## Conventions
-- Every user-visible number is numeric: invoice (100001+), order no. (restarts at 1 per session),
+- Every user-visible number is numeric: invoice (1, 2, 3 … unique), order no. (restarts at 1 per session),
   credit note (500001+), receipt (700001+), session, employee ID.
 - Bilingual: every string goes in `src/i18n/locales/en.ts` and `ar.ts`; RTL must work.
 - Layout: phones 360–430 px, tablets 768/1024/1180, desktop 1440. Check phone and desktop for UI changes.

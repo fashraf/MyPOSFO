@@ -313,7 +313,7 @@ registerSlice('payroll', {
     void tenantId;
     const initial = clone(INITIAL_PAYROLL);
     posted = SAMPLE_ACTIVITY ? initial.posted : null;
-    rules = initial.rules;
+    rules = SAMPLE_ACTIVITY ? initial.rules : [];
     entries = SAMPLE_ACTIVITY ? initial.entries : [];
     runs = SAMPLE_ACTIVITY ? initial.runs : [];
     runSequence = initial.runSequence;

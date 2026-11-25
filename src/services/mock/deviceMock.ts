@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import type {
   CommandType, DeviceCommandResult, DeviceEvent, DeviceRow,
 } from '../api/deviceApi';
@@ -119,7 +120,7 @@ registerSlice('devices', {
     const seed = seedFor(tenantId);
     branchNames = Object.fromEntries(seed.branches.map((b) => [b.id, { ar: b.nameAr, en: b.nameEn }]));
     const initial = clone(INITIAL_DEVICES);
-    devices = initial.devices.map((device) => ({
+    devices = (SAMPLE_ACTIVITY ? initial.devices : []).map((device) => ({
       ...device,
       branchNameAr: branchNames[device.branchId]?.ar ?? device.branchNameAr,
       branchNameEn: branchNames[device.branchId]?.en ?? device.branchNameEn,

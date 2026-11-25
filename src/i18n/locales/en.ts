@@ -8,6 +8,8 @@
 export const en = {
   common: {
     appName: 'PosComplete',
+    refresh: 'Refresh',
+    refreshing: 'Refreshing…',
     search: 'Search',
     searchPlaceholder: 'Search…',
     save: 'Save',

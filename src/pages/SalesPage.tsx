@@ -9,6 +9,7 @@ import {
   ErrorState,
   KpiCard,
   PageHeader,
+  RefreshButton,
   Pagination,
   SearchInput,
   SkeletonTable,
@@ -230,7 +231,7 @@ export default function SalesPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={t('sales.title')} description={t('sales.description')} />
+      <PageHeader title={t('sales.title')} description={t('sales.description')} actions={<RefreshButton onRefresh={load} />} />
 
       <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <KpiCard

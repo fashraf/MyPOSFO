@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { expenseApi, recurringApi } from './api';
 import { num, str } from './mappers/saleMappers';
@@ -77,7 +78,7 @@ registerSlice('recurring', {
   seed: (tenantId) => {
     void tenantId;
     const initial = clone(INITIAL_RECURRING);
-    recurring = initial.recurring;
+    recurring = SAMPLE_ACTIVITY ? initial.recurring : [];
   },
 });
 

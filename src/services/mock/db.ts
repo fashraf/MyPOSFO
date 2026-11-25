@@ -33,7 +33,7 @@
  */
 
 /** Bump when a seed or a stored shape changes incompatibly. Old data is discarded. */
-export const MOCK_SCHEMA_VERSION = 11;
+export const MOCK_SCHEMA_VERSION = 12;
 
 const PREFIX = 'poscomplete.mockdb';
 const keyFor = (tenantId: string) => `${PREFIX}.v${MOCK_SCHEMA_VERSION}.${tenantId}`;

@@ -105,7 +105,7 @@ export function OrderComplete({
                   {sale.orderNo ? (
                     <span className="numeric rounded-md bg-ink-900 px-2 py-0.5 text-sm font-bold text-white" data-testid="done-order-no">#{sale.orderNo}</span>
                   ) : null}
-                  <span className="numeric">{sale.invoiceNumber}</span>
+                  <span className="numeric" data-testid="done-invoice-no">{sale.invoiceNumber}</span>
                   {TypeIcon && sale.orderType && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-700">
                       <TypeIcon className="h-3 w-3" />

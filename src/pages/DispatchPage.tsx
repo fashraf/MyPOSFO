@@ -1,3 +1,4 @@
+import { RefreshButton } from '@/components/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bike, Check, HandPlatter, Package, ShoppingBag, Undo2, Utensils, type LucideIcon, Car } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui';
@@ -124,6 +125,7 @@ export default function DispatchPage() {
           <h1 className="text-lg font-semibold text-ink-900">{t('collect.title')}</h1>
           <p className="text-xs text-ink-500">{t('collect.subtitle')}</p>
         </div>
+        <RefreshButton onRefresh={load} className="ms-auto sm:order-last" />
         <div role="tablist" className="flex gap-1 rounded-xl border border-ink-200 bg-surface p-1 max-sm:order-last max-sm:w-full">
           {(['ready', 'done'] as Tab[]).map((key) => {
             const on = tab === key;

@@ -36,6 +36,7 @@ export interface EndpointPerformance {
   failures: number;
   failurePercent: number;
   rating: 'Excellent' | 'Good' | 'Acceptable' | 'Slow' | 'Critical';
+  lastCalledAtUtc?: string | null;
 }
 
 export const auditApi = {
@@ -71,6 +72,7 @@ export const auditApi = {
       }[];
       tables: { fullName: string; operation: string; changes: number; rowsAffected: number | null }[];
       timing: { totalMs: number; databaseMs: number; queryCount: number } | null;
+      queries?: QueryRun[];
     }>(`/api/audit/${auditId}/detail`);
   },
 
@@ -106,4 +108,39 @@ export const auditApi = {
   nPlusOne() {
     return api.get<Record<string, unknown>[]>('/api/audit/performance/nplusone');
   },
+
+  /** The latest requests, newest first. */
+  recent(take = 100) {
+    return api.get<RequestRun[]>('/api/audit/performance/recent', { query: { take } });
+  },
+
+  /** One request and every SQL statement it ran. */
+  request(correlationId: string) {
+    return api.get<{ request: RequestRun; queries: QueryRun[] }>(`/api/audit/performance/request/${encodeURIComponent(correlationId)}`);
+  },
 };
+
+export interface RequestRun {
+  correlationId: string;
+  username: string | null;
+  apiPath: string;
+  httpMethod: string;
+  currentPage: string | null;
+  previousPage?: string | null;
+  totalMs: number;
+  databaseMs: number;
+  queryCount: number;
+  statusCode: number;
+  succeeded: boolean;
+  errorMessage: string | null;
+  occurredAtUtc: string;
+}
+
+export interface QueryRun {
+  seq: number;
+  commandText: string;
+  parameterNames: string | null;
+  durationMs: number;
+  rowsAffected: number;
+  occurredAtUtc: string;
+}

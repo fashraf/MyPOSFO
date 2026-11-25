@@ -1,3 +1,4 @@
+import { isRemovedPath } from './features';
 import {
   Boxes,
   Carrot,
@@ -60,7 +61,7 @@ export interface NavSection {
  * The full menu. Everything here is filtered by permission before it renders —
  * see `visibleNavigation` below.
  */
-export const NAVIGATION: NavSection[] = [
+const ALL_NAVIGATION: NavSection[] = [
   {
     id: 'operate',
     labelKey: 'nav.groupMain',
@@ -157,6 +158,23 @@ export const NAVIGATION: NavSection[] = [
     ],
   },
 ];
+
+/** The menu without the features switched off in config/features.ts (single branch hides branch comparison too). */
+export const NAVIGATION: NavSection[] = ALL_NAVIGATION.map((section) => ({
+  ...section,
+  items: section.items
+    .filter((item) => !isRemovedPath(item.to))
+    .map((item) =>
+      item.children
+        ? {
+            ...item,
+            children: item.children.filter(
+              (child) => !isRemovedPath(child.to),
+            ),
+          }
+        : item,
+    ),
+})).filter((section) => section.items.length > 0);
 
 export const NAV_ITEMS: NavItem[] = NAVIGATION.flatMap((section) => section.items);
 

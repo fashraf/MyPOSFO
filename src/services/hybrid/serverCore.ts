@@ -24,6 +24,13 @@ function fresh(kind: keyof typeof FRESH_MS, force: boolean): boolean {
   return !force && Date.now() - lastSync[kind] < FRESH_MS[kind];
 }
 
+/** The next read of every area goes to the server, whatever the cache age (the Refresh button). */
+export function forceNextSync(): void {
+  lastSync.catalog = 0;
+  lastSync.sessions = 0;
+  lastSync.sales = 0;
+}
+
 /** One request at a time per area; concurrent callers share it. */
 function once(kind: keyof typeof FRESH_MS, work: () => Promise<void>): Promise<void> {
   const running = inFlight[kind];

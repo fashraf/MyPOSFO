@@ -243,15 +243,18 @@ class Run:
             self.login_pin(page, "1111")
             self.add_item(page)
             order_no = self.checkout(page, "cash")
-            body = page.locator("body").inner_text()
-            inv = re.search(r"\b(1\d{5,})\b", body)
+            # Invoices are 1, 2, 3 … now; read the number from its own element rather than guessing from the page text.
+            tag = page.get_by_test_id("done-invoice-no")
+            inv_text = tag.first.inner_text().strip() if tag.count() else ""
+            inv = re.match(r"(\d+)$", inv_text)
             if not re.fullmatch(r"#\d+", order_no):
                 self.add("WEB-MAJ-03", "fail", f"The sale completed but the order number shows as “{order_no}” instead of a number.", self.shot(page, "WEB-MAJ-03"))
             else:
                 self.add("WEB-MAJ-03", "pass", f"Cash sale completed: order {order_no}" + (f", invoice {inv.group(1)}." if inv else "."))
             if inv:
                 page.goto(self.base + "/sales"); page.wait_for_load_state("networkidle"); page.wait_for_timeout(800)
-                found = page.get_by_text(inv.group(1)).filter(visible=True).count() > 0
+                cell = page.locator("td, [role=cell]").filter(has_text=re.compile(rf"^\s*#?{inv.group(1)}\s*$"))
+                found = cell.filter(visible=True).count() > 0
                 self.add("WEB-MOD-04", "pass" if found else "fail",
                          f"Invoice {inv.group(1)} {'is listed' if found else 'does not appear'} in Sales right after the sale.",
                          None if found else self.shot(page, "WEB-MOD-04"))

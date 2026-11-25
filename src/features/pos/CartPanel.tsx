@@ -236,7 +236,7 @@ export function CartPanel({
           fullWidth
           disabled={cart.isEmpty || checkoutBlocked}
           onClick={onCheckout}
-          className={cn('mt-2.5', 'max-lg:h-14 max-lg:text-lg max-lg:font-semibold')}
+          className={cn('mt-3.5', 'max-lg:h-14 max-lg:text-lg max-lg:font-semibold')}
         >
           {/* The button says what will happen and for how much, so nobody has
               to look back up at the totals before pressing it. */}
