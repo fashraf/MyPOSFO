@@ -34,6 +34,7 @@ import { commissionService } from './payrollService';
 import { seedFor } from './mock/seed';
 import { registerSlice } from './mock/db';
 import { generateHistory, type ZatcaChain } from './mock/history';
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { companyService } from './companyService';
 import { openSessionSync, requireOpenSession, takeOrderNumber } from './restaurantSessionService';
 import { GENESIS_PIH, stampInvoice, uuidV4 } from '@/lib/zatca';
@@ -96,7 +97,9 @@ registerSlice('sales', {
   },
   seed: (tenantId) => {
     const seed = seedFor(tenantId);
-    const history = generateHistory(tenantId, seed);
+    const history = SAMPLE_ACTIVITY
+      ? generateHistory(tenantId, seed)
+      : { sales: [], invoiceSequence: 100000, chain: { icv: 0, lastHash: GENESIS_PIH } };
     sales = history.sales;
     customers = seed.customers;
     invoiceSequence = history.invoiceSequence;

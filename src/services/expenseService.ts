@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { expenseApi, reversalApi } from './api';
 import { toExpense } from './mappers/saleMappers';
@@ -53,7 +54,7 @@ registerSlice('expenses', {
     void tenantId;
     const initial = clone(INITIAL_EXPENSES);
     categories = initial.categories;
-    expenses = initial.expenses;
+    expenses = SAMPLE_ACTIVITY ? initial.expenses : [];
     sequence = initial.sequence;
   },
 });

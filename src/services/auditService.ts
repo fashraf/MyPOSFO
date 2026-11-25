@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { auditApi, type AuditRow, type EndpointPerformance } from './api';
 import type { ApiPage } from './api/catalogApi';
@@ -33,6 +34,7 @@ const ACTIONS: { action: string; module: string; entity: string; path: string; m
 const PAGES = ['/pos', '/dashboard', '/catalog', '/inventory', '/finance/cash', '/kitchen', '/users'];
 
 function buildTrail(): AuditRow[] {
+  if (!SAMPLE_ACTIVITY) return [];
   const tenantId = currentTenantId() ?? 'ten_alnoor';
   const users = seedFor(tenantId).users.filter((user) => user.status === 'active');
   const random = seededRandom(tenantId === 'ten_najd' ? 77 : 41);
@@ -127,6 +129,9 @@ const mockAudit = {
 
   async performance(_query: { from?: string; to?: string } = {}) {
     await delay(220);
+    if (!SAMPLE_ACTIVITY) {
+      return { endpoints: [] as EndpointPerformance[], summary: { totalCalls: 0, avgMs: 0, worstMs: 0, failures: 0, criticalCalls: 0, slowCalls: 0 } };
+    }
     const random = seededRandom(9);
     const endpoints: EndpointPerformance[] = ACTIONS.map((spec) => {
       const avg = Math.round(18 + random() * (spec.action === 'sale.commit' ? 260 : 90));
@@ -156,6 +161,7 @@ const mockAudit = {
 
   async slow(_thresholdMs = 300, _take = 50) {
     await delay(160);
+    if (!SAMPLE_ACTIVITY) return { requests: [] as Record<string, unknown>[], queries: [] as Record<string, unknown>[] };
     return {
       requests: [
         { apiPath: '/api/sales', httpMethod: 'POST', durationMs: 612, occurredAtUtc: new Date(Date.now() - 3_600_000).toISOString(), username: 'yousef' },
@@ -169,6 +175,7 @@ const mockAudit = {
 
   async nPlusOne() {
     await delay(120);
+    if (!SAMPLE_ACTIVITY) return [] as Record<string, unknown>[];
     return [
       { apiPath: '/api/inventory/levels', queryText: 'SELECT … FROM inv.StockMovement WHERE ItemId = @p0', repeats: 24, occurrences: 6 },
     ] as Record<string, unknown>[];

@@ -1,4 +1,4 @@
-# MyPOS test plan — suite v1.2.0
+# MyPOS test plan — suite v1.2.1
 
 ## Front end (FO)
 

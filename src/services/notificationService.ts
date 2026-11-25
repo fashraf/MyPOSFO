@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { notificationApi } from './api';
 import type { AppNotification } from '@/types/notifications';
@@ -86,7 +87,7 @@ registerSlice('notifications', {
   seed: (tenantId) => {
     void tenantId;
     const initial = clone(INITIAL_NOTIFICATIONS);
-    notifications = initial.notifications;
+    notifications = SAMPLE_ACTIVITY ? initial.notifications : [];
     readDocumentAlerts = [];
   },
 });

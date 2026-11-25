@@ -46,6 +46,13 @@ export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? '';
 export const DEMO_TOOLS: boolean =
   USE_MOCKS && (import.meta.env.VITE_DEMO_TOOLS ?? 'true').toLowerCase() !== 'false';
 
+/**
+ * Sample activity: three weeks of generated sales, six months of finance history, kitchen tickets, expenses,
+ * payroll runs, notifications and an invented audit trail. On for local demos; off on server builds, which start
+ * with the catalog, combos, branches, users and settings only — every order, invoice and number is new.
+ */
+export const SAMPLE_ACTIVITY: boolean = DEMO_TOOLS;
+
 export const APP_ENV: string = import.meta.env.MODE;
 
 export const IS_PRODUCTION: boolean = import.meta.env.PROD;
