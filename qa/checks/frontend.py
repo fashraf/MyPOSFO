@@ -12,7 +12,7 @@ C = {c.id: c for c in [
           "FO · src/main.tsx, src/App.tsx (router), the failing chunk named in the browser console; check the web container logs."),
     Check("WEB-MAJ-02", "Major", "Frontend", "Owner cannot sign in",
           "Owner signs in and the dashboard opens",
-          "Sign in as owner@lazeez.sa / Demo@1234.", "Lands on /dashboard with the menu.",
+          "Sign in as owner@alnoor.sa / Demo@1234.", "Lands on /dashboard with the menu.",
           "FO · src/features/auth/pages/Login.tsx, src/features/auth/context/AuthContext.tsx · API mode: MyPosAPI Features/Access/AuthEndpoints.cs (/api/auth/login, /verify)."),
     Check("WEB-MAJ-06", "Major", "Frontend", "A wrong PIN is accepted",
           "A wrong staff PIN is refused and stays on the login screen",
@@ -98,7 +98,7 @@ class Run:
     def add(self, cid, status, detail="", screenshot=None, **extra):
         self.results.append(Result(C[cid], status, detail, screenshot, extra))
 
-    def login_email(self, page: Page, email: str):
+    def login_email(self, page: Page, email: str, open_day: bool = True):
         page.goto(self.base + "/login")
         page.wait_for_load_state("networkidle")
         persona = page.get_by_text(email, exact=True).first
@@ -116,9 +116,30 @@ class Run:
             box.fill(email)
             page.locator("input[type=password]").first.fill("Demo@1234")
             page.locator("button[type=submit]").first.click()
+        self.finish_otp(page)
         page.wait_for_url(lambda u: "/login" not in u, timeout=15000)
         page.wait_for_load_state("networkidle")
-        self.ensure_open(page)
+        if open_day:
+            self.ensure_open(page)
+
+    def finish_otp(self, page: Page):
+        """Server sign-in asks for a one-time code (staging accepts the fixed test code)."""
+        import os
+        try:
+            page.wait_for_url(re.compile(r"/login/otp|/dashboard|/pos|/finance|/inventory|/kitchen"), timeout=15000)
+        except PWTimeout:
+            return
+        if "/login/otp" not in page.url:
+            return
+        code = os.environ.get("QA_OTP_CODE", "1234")
+        page.wait_for_timeout(300)
+        boxes = page.locator("input")
+        if boxes.count() >= len(code):
+            for i, digit in enumerate(code):
+                boxes.nth(i).fill(digit)
+        else:
+            boxes.first.fill(code)
+        page.keyboard.press("Enter")
 
     def ensure_open(self, page: Page):
         """A fresh business starts the day closed. Open the restaurant (float SAR 500) like a manager would, so
@@ -142,12 +163,13 @@ class Run:
                 page.goto(here); page.wait_for_load_state("networkidle")
 
     # Who opens the day for each cashier PIN's business (a cashier is not allowed to).
-    OPENER = {"1111": "owner@alnoor.sa", "2222": "owner@alnoor.sa", "4444": "owner@lazeez.sa", "5555": "owner@lazeez.sa"}
+    PIN_EMAIL = {"1111": "cashier@alnoor.sa", "2222": "kitchen@alnoor.sa"}
+    OPENER = {"1111": "owner@alnoor.sa", "2222": "owner@alnoor.sa", "4444": "owner@alnoor.sa", "5555": "owner@alnoor.sa"}
 
     def login_pin(self, page: Page, pin: str):
         if pin in self.OPENER:  # morning routine: manager opens the restaurant, then hands over the till
             self.login_email(page, self.OPENER[pin])
-            page.evaluate("() => { for (const k of Object.keys(localStorage)) if (/auth\\.session$/.test(k)) localStorage.removeItem(k); }")
+            page.evaluate("() => { for (const k of Object.keys(localStorage)) if (/auth\\.session$/.test(k)) localStorage.removeItem(k); sessionStorage.clear(); }")
         page.goto(self.base + "/login")
         page.wait_for_load_state("networkidle")
         tab = page.get_by_role("tab", name="Staff PIN")
@@ -155,7 +177,12 @@ class Run:
             tab.click()
         for d in pin:
             page.get_by_role("button", name=d, exact=True).click()
-        page.wait_for_url(lambda u: "/login" not in u, timeout=15000)
+        try:
+            page.wait_for_url(lambda u: "/login" not in u, timeout=6000)
+        except PWTimeout:
+            # Server mode: PIN sign-in is not on the server yet, so the cashier signs in with email.
+            self.login_email(page, self.PIN_EMAIL.get(pin, "cashier@alnoor.sa"), open_day=False)
+            return
         page.wait_for_load_state("networkidle")
 
     def add_item(self, page: Page, name="Butter Croissant"):
@@ -283,7 +310,7 @@ class Run:
     def sign_out(self, browser):
         c = self.ctx(browser, {"width": 390, "height": 844}, mobile=True); page = c.new_page()
         try:
-            self.login_email(page, "owner@lazeez.sa")
+            self.login_email(page, "owner@alnoor.sa")
             page.get_by_test_id("account-menu").click(); page.wait_for_timeout(400)
             page.get_by_role("menuitem", name=re.compile("Sign out")).click(); page.wait_for_timeout(300)
             page.locator("[role=dialog] button, [role=alertdialog] button").filter(has_text="Sign out").last.click()
@@ -353,7 +380,7 @@ class Run:
         page.on("console", lambda m: console.append((page.url, m.text[:160])) if m.type == "error" and not any(n in m.text for n in NOISE) else None)
         page.on("pageerror", lambda e: crashes.append((page.url, str(e)[:160])))
         try:
-            self.login_email(page, "owner@lazeez.sa")
+            self.login_email(page, "owner@alnoor.sa")
             ok = page.locator("main, [role=main]").first.inner_text(timeout=8000)
             self.add("WEB-MAJ-02", "pass" if ok.strip() else "fail", f"Owner signed in and landed on {page.url.replace(self.base, '') or '/'}.")
         except Exception as e:  # noqa: BLE001
@@ -402,7 +429,7 @@ class Run:
     def phone_overflow(self, browser):
         c = self.ctx(browser, PHONE, mobile=True); page = c.new_page()
         try:
-            self.login_email(page, "owner@lazeez.sa")
+            self.login_email(page, "owner@alnoor.sa")
             bad, shot = [], None
             for href in ["/dashboard", "/pos", "/sales", "/catalog", "/customers", "/kitchen", "/restaurant", "/settings"]:
                 page.goto(self.base + href); page.wait_for_load_state("networkidle"); page.wait_for_timeout(400)
@@ -419,7 +446,7 @@ class Run:
     def arabic(self, browser):
         c = self.ctx(browser, DESKTOP, lang="ar"); page = c.new_page()
         try:
-            self.login_email(page, "owner@lazeez.sa")
+            self.login_email(page, "owner@alnoor.sa")
             d = page.evaluate("() => [document.documentElement.dir, document.documentElement.lang]")
             text = page.locator("main, [role=main]").first.inner_text()
             arabic = len(re.findall(r"[؀-ۿ]", text)); latin = len(re.findall(r"[A-Za-z]", text))

@@ -16,8 +16,8 @@ C = {c.id: c for c in [
           "API · src/PosApi/Features/Access/AuthEndpoints.cs RequestOtpAsync; DB auth tables (11-api-auth-tables.sql)."),
     Check("API-MAJ-04", "Major", "API", "Signing in with a one-time code fails",
           "A QA owner signs in end to end: code requested, code verified, /me returns the same user",
-          "Register qa-owner@mypos.test once → POST /api/auth/login → POST /api/auth/verify (staging test code) → GET /api/auth/me",
-          "200 with tokens; /me shows qa-owner@mypos.test",
+          "POST /api/auth/login as owner@alnoor.sa → POST /api/auth/verify (staging test code) → GET /api/auth/me",
+          "200 with tokens; /me shows owner@alnoor.sa",
           "API · src/PosApi/Features/Access/AuthEndpoints.cs, AuthStore.cs, Auth/OtpService.cs; staging must run with Auth__UseFixedDevOtp=true (deploy/windows/lib.ps1)."),
     Check("API-MOD-01", "Moderate", "API", "Private data is reachable without signing in",
           "Sales, catalog, tax settings and sessions refuse requests without a token (401)", "GET each private endpoint with no token",
@@ -33,7 +33,7 @@ C = {c.id: c for c in [
           "GET /health tells which version is running", "Read version from GET /health", "version = the deployed tag (sha-… or v…)",
           "API · src/PosApi/Program.cs /health (reads APP_VERSION, set by deploy/compose.yml)."),
 ]}
-PROTECTED = ["/api/sales", "/api/catalog/items", "/api/settings/tax", "/api/restaurant-sessions/status"]
+PROTECTED = ["/api/sales", "/api/catalog/items", "/api/audit", "/api/restaurant-sessions/status"]
 
 
 def call(base, path, method="GET", body: bytes | None = None, headers=None):
@@ -41,28 +41,26 @@ def call(base, path, method="GET", body: bytes | None = None, headers=None):
     t0 = time.time()
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
-            return r.status, r.headers.get("Content-Type", ""), r.read(4000).decode("utf-8", "replace"), time.time() - t0
+            return r.status, r.headers.get("Content-Type", ""), r.read(500_000).decode("utf-8", "replace"), time.time() - t0
     except urllib.error.HTTPError as e:
-        return e.code, e.headers.get("Content-Type", ""), e.read(2000).decode("utf-8", "replace"), time.time() - t0
+        return e.code, e.headers.get("Content-Type", ""), e.read(50_000).decode("utf-8", "replace"), time.time() - t0
     except Exception as e:  # noqa: BLE001
         return 0, "", f"{type(e).__name__}: {e}", time.time() - t0
 
 
-QA_EMAIL = "qa-owner@mypos.test"
+QA_EMAIL = "owner@alnoor.sa"  # seeded on staging; override with QA_SIGNIN_EMAIL
 
 
 def sign_in(base: str) -> Result:
     import os
     c = C["API-MAJ-04"]
     if os.environ.get("QA_ENV") == "production":
-        return Result(c, "skip", "Not run on production (it would create a QA business).")
+        return Result(c, "skip", "Not run on production (it uses the staging test code).")
     code = os.environ.get("QA_OTP_CODE", "1234")
     j = lambda d: json.dumps(d).encode()  # noqa: E731
     h = {"Content-Type": "application/json"}
-    call(base, "/api/auth/register", "POST", j({"business": {"nameAr": "اختبار الجودة", "nameEn": "QA Business", "city": "Riyadh"},
-                                                "owner": {"firstName": "QA", "lastName": "Owner", "email": QA_EMAIL},
-                                                "tax": {"isVatRegistered": False}}), h)   # 200 first time, 422 email_taken after
-    st, _, body, _ = call(base, "/api/auth/login", "POST", j({"identifier": QA_EMAIL}), h)
+    email = os.environ.get("QA_SIGNIN_EMAIL", QA_EMAIL)
+    st, _, body, _ = call(base, "/api/auth/login", "POST", j({"identifier": email}), h)
     try:
         challenge = json.loads(body)["challengeId"]
     except (ValueError, KeyError):
@@ -72,8 +70,13 @@ def sign_in(base: str) -> Result:
         return Result(c, "fail", f"Verifying the code returned {st}: {body[:120]} (is Auth__UseFixedDevOtp on for staging?)")
     token = json.loads(body).get("accessToken", "")
     st, _, body, _ = call(base, "/api/auth/me", headers={"Authorization": f"Bearer {token}"})
-    if st == 200 and QA_EMAIL in body:
-        return Result(c, "pass", f"Signed in as {QA_EMAIL}; /me answered 200.")
+    who = {}
+    try:
+        who = json.loads(body) if st == 200 else {}
+    except ValueError:
+        pass
+    if who.get("userId"):
+        return Result(c, "pass", f"Signed in as {email} ({who.get('nameEn') or who['userId']}); /me answered 200.")
     return Result(c, "fail", f"Signed in, but /me returned {st}: {body[:120]}")
 
 

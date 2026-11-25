@@ -1,5 +1,5 @@
 import { SAMPLE_ACTIVITY } from '@/config/env';
-import { USE_MOCKS } from '@/config/env';
+import { SERVER_CORE, USE_MOCKS } from '@/config/env';
 import { auditApi, type AuditRow, type EndpointPerformance } from './api';
 import type { ApiPage } from './api/catalogApi';
 import { currentTenantId } from './mock/db';
@@ -182,6 +182,6 @@ const mockAudit = {
   },
 };
 
-export const auditService: typeof mockAudit = USE_MOCKS
+export const auditService: typeof mockAudit = USE_MOCKS && !SERVER_CORE
   ? mockAudit
   : (auditApi as unknown as typeof mockAudit);

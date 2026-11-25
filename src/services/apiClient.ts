@@ -71,7 +71,7 @@ function buildUrl(path: string, query?: ApiRequestOptions['query']): string {
  */
 let refreshInFlight: Promise<boolean> | null = null;
 
-async function refreshSession(): Promise<boolean> {
+export async function refreshSession(): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight;
 
   refreshInFlight = (async () => {
@@ -177,10 +177,27 @@ async function send<T>(path: string, options: ApiRequestOptions, retry: boolean)
   if (response.status === 204) return undefined as T;
 
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
+  let payload: unknown = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = null; /* a proxy error page, not JSON */
+  }
 
   if (!response.ok) {
     const error = payload as ApiErrorBody | null;
+
+    /* The rate limiter answers with an empty body: say what happened instead of "something went wrong". */
+    if (response.status === 429 && !error?.code) {
+      throw new HttpError({
+        status: 429,
+        code: 'too_many_requests',
+        message:
+          currentLanguage === 'ar'
+            ? 'محاولات كثيرة خلال وقت قصير. انتظر دقيقة ثم حاول مرة أخرى.'
+            : 'Too many attempts in a short time. Wait a minute and try again.',
+      });
+    }
 
     throw new HttpError({
       status: response.status,
