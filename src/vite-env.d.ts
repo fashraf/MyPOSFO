@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   /** Set to 'false' to hide the persona drawer and demo bar in mock mode. */
   readonly VITE_DEMO_TOOLS?: string;
+  readonly VITE_TENANT_ID?: string;
 }
 
 interface ImportMeta {

@@ -1,4 +1,5 @@
-import { USE_MOCKS } from '@/config/env';
+import { SERVER_CORE, USE_MOCKS } from '@/config/env';
+import { hybridCatalog, hybridCategories } from './hybrid/wrappers';
 import {
   activeBranchForStock,
   apiCatalogService,
@@ -448,7 +449,7 @@ export const staffService = {
 ==============================================================================*/
 
 export const catalogService = USE_MOCKS
-  ? mockCatalogService
+  ? SERVER_CORE ? hybridCatalog(mockCatalogService) : mockCatalogService
   : ({
       ...mockCatalogService,
       ...apiCatalogService,
@@ -459,5 +460,5 @@ export const catalogService = USE_MOCKS
     } as typeof mockCatalogService);
 
 export const categoryService = USE_MOCKS
-  ? mockCategoryService
+  ? SERVER_CORE ? hybridCategories(mockCategoryService) : mockCategoryService
   : ({ ...mockCategoryService, ...apiCategoryService } as typeof mockCategoryService);

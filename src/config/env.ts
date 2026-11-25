@@ -9,11 +9,11 @@
  * dev` works with no `.env` file at all: the app starts in mock mode.
  */
 
-export type DataSourceKind = 'mock' | 'api';
+export type DataSourceKind = 'mock' | 'hybrid' | 'api';
 
 function readDataSource(): DataSourceKind {
   const explicit = (import.meta.env.VITE_DATA_SOURCE ?? '').trim().toLowerCase();
-  if (explicit === 'api' || explicit === 'mock') return explicit;
+  if (explicit === 'api' || explicit === 'mock' || explicit === 'hybrid') return explicit;
 
   /* Legacy flag, still honoured so older .env files keep working. */
   const legacy = (import.meta.env.VITE_USE_MOCKS ?? '').trim().toLowerCase();
@@ -31,8 +31,17 @@ function readDataSource(): DataSourceKind {
  */
 export const DATA_SOURCE: DataSourceKind = readDataSource();
 
-/** Shorthand used throughout the services. */
-export const USE_MOCKS: boolean = DATA_SOURCE === 'mock';
+/** Shorthand used throughout the services: true when the in-browser database is in use (mock and hybrid). */
+export const USE_MOCKS: boolean = DATA_SOURCE !== 'api';
+
+/**
+ * Hybrid: sign-in, catalog, restaurant sessions, sales and audit go through the server (one shared database for every
+ * device); the modules not yet on the server keep working from the browser database of HYBRID_TENANT.
+ */
+export const SERVER_CORE: boolean = DATA_SOURCE === 'hybrid';
+
+/** The business whose browser database backs the not-yet-ported modules in hybrid mode. Same ids as the server seed. */
+export const HYBRID_TENANT: string = (import.meta.env.VITE_TENANT_ID ?? 'ten_alnoor').trim() || 'ten_alnoor';
 
 /**
  * Where the API lives (api mode only).

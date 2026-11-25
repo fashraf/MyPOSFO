@@ -1,3 +1,5 @@
+import { SERVER_CORE } from '@/config/env';
+import { hybridSessions } from './hybrid/wrappers';
 import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { api } from './apiClient';
@@ -425,7 +427,7 @@ export function openSessionSync(branchId: string | null | undefined): Restaurant
 
 /* -------------------------------------------------------------- service */
 
-export const restaurantSessionService = {
+const baseRestaurantSessionService = {
   async status(branchId: string | null): Promise<{ open: boolean; session: RestaurantSession | null }> {
     if (!USE_MOCKS) return api.get('/api/restaurant-sessions/status', { query: { branchId: branchId ?? undefined } });
     await delay(60);
@@ -731,3 +733,6 @@ export const restaurantSessionService = {
     );
   },
 };
+
+/** Hybrid mode: the server holds the trading day; see services/hybrid/serverCore.ts. */
+export const restaurantSessionService = SERVER_CORE ? hybridSessions(baseRestaurantSessionService) : baseRestaurantSessionService;

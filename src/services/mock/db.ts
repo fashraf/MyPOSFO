@@ -270,3 +270,36 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', flush);
   window.addEventListener('beforeunload', flush);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Server-backed slices (hybrid mode)                                          */
+/* -------------------------------------------------------------------------- */
+
+/** Replace part of a slice's state, e.g. with what the server returned. */
+export function patchSlice<T extends object>(name: string, change: (current: T) => T): void {
+  const adapter = slices.get(name);
+  if (!adapter) return;
+  adapter.restore(change(adapter.capture() as T));
+  schedulePersist();
+}
+
+/** A deep copy of every registered slice, to roll back to if the server refuses an operation. */
+export function snapshotSlices(): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [name, adapter] of slices) {
+    try {
+      out[name] = structuredClone(adapter.capture());
+    } catch {
+      /* A slice that cannot be copied is left as it is. */
+    }
+  }
+  return out;
+}
+
+export function restoreSlices(snapshot: Record<string, unknown>): void {
+  for (const [name, data] of Object.entries(snapshot)) {
+    const adapter = slices.get(name);
+    if (adapter) adapter.restore(data);
+  }
+  schedulePersist();
+}

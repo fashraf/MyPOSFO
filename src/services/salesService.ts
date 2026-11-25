@@ -34,7 +34,8 @@ import { commissionService } from './payrollService';
 import { seedFor } from './mock/seed';
 import { registerSlice } from './mock/db';
 import { generateHistory, type ZatcaChain } from './mock/history';
-import { SAMPLE_ACTIVITY } from '@/config/env';
+import { SAMPLE_ACTIVITY, SERVER_CORE } from '@/config/env';
+import { hybridSales } from './hybrid/wrappers';
 import { companyService } from './companyService';
 import { openSessionSync, requireOpenSession, takeOrderNumber } from './restaurantSessionService';
 import { GENESIS_PIH, stampInvoice, uuidV4 } from '@/lib/zatca';
@@ -180,7 +181,7 @@ function nextInvoiceNumber(): string {
   return String(invoiceSequence);
 }
 
-export const salesService = {
+const baseSalesService = {
   async commit(input: CommitSaleInput): Promise<Sale> {
     /* Against the real backend this is a single call: the server runs the
        sale, the stock movement, the commission and the ledger entry inside one
@@ -1445,3 +1446,6 @@ export const zatcaService = {
     return { checked: ordered.length, breaks };
   },
 };
+
+/** Hybrid mode: sales are committed and numbered by the server; see services/hybrid/serverCore.ts. */
+export const salesService = SERVER_CORE ? hybridSales(baseSalesService) : baseSalesService;
