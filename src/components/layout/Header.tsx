@@ -216,6 +216,8 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
           trigger={
             <button
               type="button"
+              data-testid="account-menu"
+              aria-label={t('common.profile')}
               className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-ink-100"
             >
               <Avatar name={user ? branchName(user) : "?"} size="sm" />

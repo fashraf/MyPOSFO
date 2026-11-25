@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { commissionRuleApi, financeApi, payrollApi } from './api';
 import { invalidate } from './dataVersion';
@@ -311,10 +312,10 @@ registerSlice('payroll', {
   seed: (tenantId) => {
     void tenantId;
     const initial = clone(INITIAL_PAYROLL);
-    posted = initial.posted;
+    posted = SAMPLE_ACTIVITY ? initial.posted : null;
     rules = initial.rules;
-    entries = initial.entries;
-    runs = initial.runs;
+    entries = SAMPLE_ACTIVITY ? initial.entries : [];
+    runs = SAMPLE_ACTIVITY ? initial.runs : [];
     runSequence = initial.runSequence;
   },
 });

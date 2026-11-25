@@ -108,14 +108,46 @@ class Run:
                 toggle.click()
         if persona.is_visible():
             persona.click()
-        else:  # real login form (api mode)
-            page.locator("input[type=email], input[name=email], input[autocomplete=username]").first.fill(email)
+        else:  # real login form (api mode, or demo tools off)
+            box = page.locator("input[type=email], input[name=email], input[autocomplete=username]").first
+            if not box.is_visible():  # phones open on the PIN tab
+                page.locator("button, [role=tab]").filter(has_text=re.compile("^\\s*(Email|البريد)\\s*$")).first.click()
+                page.wait_for_timeout(200)
+            box.fill(email)
             page.locator("input[type=password]").first.fill("Demo@1234")
             page.locator("button[type=submit]").first.click()
         page.wait_for_url(lambda u: "/login" not in u, timeout=15000)
         page.wait_for_load_state("networkidle")
+        self.ensure_open(page)
+
+    def ensure_open(self, page: Page):
+        """A fresh business starts the day closed. Open the restaurant (float SAR 500) like a manager would, so
+        sales checks test selling, not the closed banner. Does nothing when it is already open."""
+        here = page.url
+        try:
+            page.goto(self.base + "/pos"); page.wait_for_load_state("networkidle"); page.wait_for_timeout(600)
+            btn = page.locator("button").filter(has_text=re.compile("^\\s*(Open restaurant|فتح المطعم)\\s*$")).first
+            if not (btn.count() and btn.is_visible()):
+                return
+            btn.click(); page.wait_for_timeout(500)
+            dlg = page.locator("[role=dialog]").last
+            dlg.locator("input[type=text], input[inputmode=decimal]").first.fill("500")
+            box = dlg.locator("input[type=checkbox]")
+            if box.count() and not box.first.is_checked():
+                box.first.check(force=True)
+            dlg.locator("button").filter(has_text=re.compile("open the restaurant|Open restaurant|افتح المطعم", re.I)).last.click()
+            page.wait_for_timeout(1200)
+        finally:
+            if "/pos" not in here:
+                page.goto(here); page.wait_for_load_state("networkidle")
+
+    # Who opens the day for each cashier PIN's business (a cashier is not allowed to).
+    OPENER = {"1111": "owner@alnoor.sa", "2222": "owner@alnoor.sa", "4444": "owner@lazeez.sa", "5555": "owner@lazeez.sa"}
 
     def login_pin(self, page: Page, pin: str):
+        if pin in self.OPENER:  # morning routine: manager opens the restaurant, then hands over the till
+            self.login_email(page, self.OPENER[pin])
+            page.evaluate("() => { for (const k of Object.keys(localStorage)) if (/auth\\.session$/.test(k)) localStorage.removeItem(k); }")
         page.goto(self.base + "/login")
         page.wait_for_load_state("networkidle")
         tab = page.get_by_role("tab", name="Staff PIN")
@@ -252,7 +284,7 @@ class Run:
         c = self.ctx(browser, {"width": 390, "height": 844}, mobile=True); page = c.new_page()
         try:
             self.login_email(page, "owner@lazeez.sa")
-            page.locator("header button").last.click(); page.wait_for_timeout(400)
+            page.get_by_test_id("account-menu").click(); page.wait_for_timeout(400)
             page.get_by_role("menuitem", name=re.compile("Sign out")).click(); page.wait_for_timeout(300)
             page.locator("[role=dialog] button, [role=alertdialog] button").filter(has_text="Sign out").last.click()
             page.wait_for_url(lambda u: "/login" in u, timeout=10000)

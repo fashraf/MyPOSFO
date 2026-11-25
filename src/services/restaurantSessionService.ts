@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { api } from './apiClient';
 import { HttpError } from './http';
@@ -124,6 +125,8 @@ function seed(tenantId: string): void {
   audit = [];
   settings = { ...DEFAULT_SETTINGS };
   sequence = 1;
+  /* Without sample activity the day starts closed: the manager opens the restaurant, which becomes session 1001. */
+  if (!SAMPLE_ACTIVITY) return;
 
   const today = currentBusinessDate();
   /* 20 closed days per branch, then today's open session. Seeded closing

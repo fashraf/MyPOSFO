@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { kitchenApi } from './api';
 import { invalidate } from './dataVersion';
@@ -20,7 +21,7 @@ registerSlice('kitchen', {
     /* Tickets are aged relative to now when seeded, so the board always opens
        with a fresh, a warning and a late card. */
     const seed = seedFor(tenantId);
-    orders = [...seed.kitchenOrders, ...todaysHistory(seed.catalog, tenantId)];
+    orders = SAMPLE_ACTIVITY ? [...seed.kitchenOrders, ...todaysHistory(seed.catalog, tenantId)] : [];
   },
 });
 

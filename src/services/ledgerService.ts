@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import { USE_MOCKS } from '@/config/env';
 import { financeApi } from './api';
 import { num, toJournalEntry } from './mappers/saleMappers';
@@ -26,8 +27,9 @@ let historyPosted = false;
 
 async function ensureHistory(): Promise<void> {
   if (!historyReady) {
-    historyReady = import('./mock/financeSeed')
-      .then((module) => module.seedFinanceHistory())
+    historyReady = (SAMPLE_ACTIVITY
+      ? import('./mock/financeSeed').then((module) => module.seedFinanceHistory())
+      : Promise.resolve())
       .then(() => {
         historyPosted = true;
       });
