@@ -3,11 +3,13 @@ import type { CatalogItem, Category } from '@/types/catalog';
 import type { RestaurantSession, CashMovement } from '@/types/restaurantSession';
 import type { Sale } from '@/types/sales';
 import {
+  pushChangedTickets,
   saveCatalogItem,
   saveCategory,
   serverBacked,
   stockMoves,
   syncCatalog,
+  syncKitchen,
   syncSales,
   syncSessions,
 } from './serverCore';
@@ -151,5 +153,32 @@ export function hybridCategories<T extends AnyService>(base: T): T {
         return local;
       }, () => syncCatalog(true));
     },
+  } as T;
+}
+
+/* ----------------------------------------------------------------- kitchen */
+
+/** Kitchen and collection boards shared through the server; the ticket logic itself stays here. */
+export function hybridKitchen<T extends AnyService>(base: T, tickets: () => { orderNumber: string; id: string; status: string }[]): T {
+  const write = (name: string) => async (...args: unknown[]) => {
+    await syncKitchen(true);
+    const before = structuredClone(tickets());
+    return serverBacked(
+      () => base[name](...args),
+      async (result) => {
+        await pushChangedTickets(before, tickets());
+        return result;
+      },
+      () => syncKitchen(true),
+    );
+  };
+  return {
+    ...base,
+    ...refreshingReads(base, ['list', 'forOrder', 'hasStarted'], () => syncKitchen()),
+    setStatus: write('setStatus'),
+    restore: write('restore'),
+    setItemProgress: write('setItemProgress'),
+    cancelForOrder: write('cancelForOrder'),
+    createFromSale: write('createFromSale'),
   } as T;
 }

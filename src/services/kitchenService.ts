@@ -1,4 +1,5 @@
-import { SAMPLE_ACTIVITY } from '@/config/env';
+import { SAMPLE_ACTIVITY, SERVER_CORE } from '@/config/env';
+import { hybridKitchen } from './hybrid/wrappers';
 import { USE_MOCKS } from '@/config/env';
 import { kitchenApi } from './api';
 import { invalidate } from './dataVersion';
@@ -33,7 +34,7 @@ export function onKitchenOrderCompleted(listener: (order: KitchenOrder) => void)
   return () => completedListeners.delete(listener);
 }
 
-export const kitchenService = {
+const baseKitchenService = {
   async list(): Promise<KitchenOrder[]> {
     if (!USE_MOCKS) {
       /* The service takes no branch; the endpoint scopes by the token's
@@ -273,3 +274,6 @@ function todaysHistory(catalog: CatalogItem[], tenantId: string): KitchenOrder[]
   }
   return out;
 }
+
+/** Hybrid mode: tickets live on the server so every device shows the same board. */
+export const kitchenService = SERVER_CORE ? hybridKitchen(baseKitchenService, () => orders) : baseKitchenService;

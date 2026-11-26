@@ -169,7 +169,7 @@ class Run:
     def login_pin(self, page: Page, pin: str):
         if pin in self.OPENER:  # morning routine: manager opens the restaurant, then hands over the till
             self.login_email(page, self.OPENER[pin])
-            page.evaluate("() => { for (const k of Object.keys(localStorage)) if (/auth\\.session$/.test(k)) localStorage.removeItem(k); sessionStorage.clear(); }")
+            page.evaluate("() => { for (const k of Object.keys(localStorage)) if (/auth\\.session$|^nazad\\.refresh$/.test(k)) localStorage.removeItem(k); sessionStorage.clear(); }")
         page.goto(self.base + "/login")
         page.wait_for_load_state("networkidle")
         tab = page.get_by_role("tab", name="Staff PIN")

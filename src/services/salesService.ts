@@ -846,24 +846,44 @@ const baseSalesService = {
         }));
       })(),
 
-      receivables: [
-        { bucket: 'Current', amountH: 142000, customers: 6 },
-        { bucket: '31-60 days', amountH: 68000, customers: 3 },
-        { bucket: '61-90 days', amountH: 24500, customers: 2 },
-        /* Deliberately non-zero: the bucket that needs attention is the one
-           easiest to render wrongly when it is always empty in development. */
-        { bucket: 'Over 90 days', amountH: 31000, customers: 1 },
-      ],
+      /* Sample figures only in the demo; otherwise worked out from real records (empty until there are some). */
+      receivables: SAMPLE_ACTIVITY
+        ? [
+            { bucket: 'Current', amountH: 142000, customers: 6 },
+            { bucket: '31-60 days', amountH: 68000, customers: 3 },
+            { bucket: '61-90 days', amountH: 24500, customers: 2 },
+            { bucket: 'Over 90 days', amountH: 31000, customers: 1 },
+          ]
+        : [
+            {
+              bucket: 'Current',
+              amountH: customers.reduce((sum, c) => sum + Math.max(0, c.balanceH ?? 0), 0),
+              customers: customers.filter((c) => (c.balanceH ?? 0) > 0).length,
+            },
+            { bucket: '31-60 days', amountH: 0, customers: 0 },
+            { bucket: '61-90 days', amountH: 0, customers: 0 },
+            { bucket: 'Over 90 days', amountH: 0, customers: 0 },
+          ],
       cardPosition: (() => {
-        const takenH = 486000, settledH = 402000, feesH = 6100;
-        return { takenH, settledH, feesH, pendingH: takenH - settledH - feesH };
+        if (SAMPLE_ACTIVITY) {
+          const takenH = 486000, settledH = 402000, feesH = 6100;
+          return { takenH, settledH, feesH, pendingH: takenH - settledH - feesH };
+        }
+        /* Card takings in the period from the real sales; settlements are not recorded yet, so all of it is waiting. */
+        const takenH = inWindow
+          .flatMap((sale) => sale.payments)
+          .filter((payment) => payment.method === 'card')
+          .reduce((sum, payment) => sum + payment.amountH, 0);
+        return { takenH, settledH: 0, feesH: 0, pendingH: takenH };
       })(),
-      expenses: [
-        { category: 'Rent', amountH: 800000 },
-        { category: 'Salaries', amountH: 1100000 },
-        { category: 'Utilities', amountH: 180000 },
-        { category: 'Supplies', amountH: 95000 },
-      ],
+      expenses: SAMPLE_ACTIVITY
+        ? [
+            { category: 'Rent', amountH: 800000 },
+            { category: 'Salaries', amountH: 1100000 },
+            { category: 'Utilities', amountH: 180000 },
+            { category: 'Supplies', amountH: 95000 },
+          ]
+        : [],
       topItems: Object.entries(itemTotals)
         .map(([itemId, value]) => ({ itemId, ...value }))
         .sort((a, b) => b.revenueH - a.revenueH)
