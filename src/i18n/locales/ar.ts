@@ -1569,6 +1569,7 @@ export const ar: Dictionary = {
     },
   },
   quickLinks: {
+    pages: 'روابط سريعة',
     title: 'إجراءات سريعة',
     open: 'إجراءات سريعة',
     hint: 'انتقل مباشرةً إلى ما تحتاجه.',

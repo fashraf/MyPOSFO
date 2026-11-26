@@ -1581,6 +1581,7 @@ export const en = {
     },
   },
   quickLinks: {
+    pages: 'Quick links',
     title: 'Quick actions',
     open: 'Quick actions',
     hint: 'Jump straight to the thing you need.',
