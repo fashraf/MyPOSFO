@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Receipt, RotateCcw, TrendingUp } from 'lucide-react';
 import {
-  Badge,
   Button,
   CurrencyDisplay,
   EmptyState,
@@ -23,6 +22,9 @@ import {
   Select,
 } from '@/components/ui';
 import { SaleDetail } from '@/features/sales/SaleDetail';
+import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
+import { useKitchenTickets } from '@/hooks/useKitchenTickets';
+import { ORDER_STATUSES, orderStatus, type OrderStatus } from '@/lib/orderStatus';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useSession } from '@/contexts/SessionContext';
@@ -32,25 +34,17 @@ import { formatDate, formatNumber } from '@/lib/format';
 import { ROUTES } from '@/routes/paths';
 import { customerService, returnsService, safeCall, salesService } from '@/services';
 import { useDataVersion } from '@/services/dataVersion';
-import type { BadgeTone } from '@/components/ui';
 import type {
   CreditNote,
   Customer,
   PaymentMethod,
   ReturnReason,
   Sale,
-  SaleStatus,
   CancelReasonCode,
 } from '@/types/sales';
 
 const PAGE_SIZE = 10;
 
-const STATUS_TONES: Record<SaleStatus, BadgeTone> = {
-  completed: 'success',
-  returned: 'warning',
-  partially_returned: 'warning',
-  voided: 'danger',
-};
 
 export default function SalesPage() {
   const { t } = useTranslation();
@@ -74,7 +68,10 @@ export default function SalesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '');
-  const [status, setStatus] = useState<SaleStatus | 'all'>('all');
+  const [status, setStatus] = useState<OrderStatus | 'all'>('all');
+  /* Kitchen progress, so the status here is the same one the kitchen and collection screens show. */
+  const tickets = useKitchenTickets();
+  const statusOf = useCallback((sale: Sale) => orderStatus(sale, tickets.get(sale.invoiceNumber)), [tickets]);
   const [method, setMethod] = useState<PaymentMethod | 'all'>('all');
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -136,13 +133,13 @@ export default function SalesPage() {
   const visible = useMemo(
     () =>
       sales.filter((sale) => {
-        if (status !== 'all' && sale.status !== status) return false;
+        if (status !== 'all' && statusOf(sale) !== status) return false;
         if (method !== 'all' && !sale.payments.some((payment) => payment.method === method)) {
           return false;
         }
         return true;
       }),
-    [sales, status, method],
+    [sales, status, method, statusOf],
   );
 
   const summary = useMemo(() => {
@@ -233,22 +230,26 @@ export default function SalesPage() {
     <div className="space-y-4">
       <PageHeader title={t('sales.title')} description={t('sales.description')} actions={<RefreshButton onRefresh={load} />} />
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <KpiCard
+          compact
           label={t('sales.summary.netSales')}
           value={<CurrencyDisplay amount={summary.netH} />}
           icon={<TrendingUp />}
         />
         <KpiCard
+          compact
           label={t('sales.summary.invoices')}
           value={<span className="numeric">{formatNumber(summary.invoices, { language })}</span>}
           icon={<Receipt />}
         />
         <KpiCard
+          compact
           label={t('sales.summary.averageSale')}
           value={<CurrencyDisplay amount={summary.averageH} />}
         />
         <KpiCard
+          compact
           label={t('sales.summary.returned')}
           value={<span className="numeric">{formatNumber(summary.returned, { language })}</span>}
           icon={<RotateCcw />}
@@ -268,13 +269,10 @@ export default function SalesPage() {
           <Select
             className="sm:max-w-[12rem]"
             value={status}
-            onChange={(value) => setStatus(value as SaleStatus | 'all')}
+            onChange={(value) => setStatus(value as OrderStatus | 'all')}
             options={[
               { value: 'all', label: t('sales.filters.allStatuses') },
-              { value: 'completed', label: t('sales.status.completed') },
-              { value: 'partially_returned', label: t('sales.status.partially_returned') },
-              { value: 'returned', label: t('sales.status.returned') },
-              { value: 'voided', label: t('sales.status.voided') },
+              ...ORDER_STATUSES.map((value) => ({ value, label: t(`orderStatus.${value}`) })),
             ]}
           />
 
@@ -335,9 +333,7 @@ export default function SalesPage() {
                           <span className="numeric truncate text-md font-semibold text-ink-900">
                             {sale.invoiceNumber}
                           </span>
-                          <Badge tone={STATUS_TONES[sale.status]} dot>
-                            {t(`sales.status.${sale.status}`)}
-                          </Badge>
+                          <OrderStatusBadge status={statusOf(sale)} />
                         </span>
                         <span className="block truncate text-sm text-ink-600">
                           {customerName(sale.customerId)}
@@ -423,9 +419,7 @@ export default function SalesPage() {
                       <CurrencyDisplay amount={sale.totalH} />
                     </TableCell>
                     <TableCell>
-                      <Badge tone={STATUS_TONES[sale.status]} dot>
-                        {t(`sales.status.${sale.status}`)}
-                      </Badge>
+                      <OrderStatusBadge status={statusOf(sale)} />
                     </TableCell>
                   </TableRow>
                 ))

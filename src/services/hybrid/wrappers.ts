@@ -105,11 +105,11 @@ export function hybridSales<T extends AnyService>(base: T): T {
       );
     },
 
-    async voidSale(id: string, reason: string, actor: string, code?: string): Promise<Sale> {
+    async voidSale(id: string, reason: string, actor: string, code?: string, replacedByInvoice?: string): Promise<Sale> {
       await syncSales(true);
       return serverBacked(
-        () => base.voidSale(id, reason, actor, code) as Promise<Sale>,
-        () => api.post<Sale>(`/api/sales/${encodeURIComponent(id)}/void`, { reason, code, voidedBy: actor }),
+        () => base.voidSale(id, reason, actor, code, replacedByInvoice) as Promise<Sale>,
+        () => api.post<Sale>(`/api/sales/${encodeURIComponent(id)}/void`, { reason, code, voidedBy: actor, replacedByInvoice }),
         async () => {
           await syncSales(true);
           void syncCatalog(true).catch(() => undefined);

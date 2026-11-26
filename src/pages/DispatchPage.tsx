@@ -9,6 +9,7 @@ import { kitchenService, safeCall } from '@/services';
 import { formatElapsed } from '@/types/kitchen';
 import type { KitchenOrder, OrderType } from '@/types/kitchen';
 import { playChime, ticketLabel, viewOf } from '@/features/kitchen/kds';
+import { EditedBadge } from '@/features/kitchen/EditedBadge';
 
 /*
  * Collection & dispatch — the pass.
@@ -61,7 +62,12 @@ export default function DispatchPage() {
   void seen;
 
   const today = new Date().toDateString();
-  const ready = useMemo(() => orders.filter((o) => o.status === 'ready' && (type === 'all' || o.orderType === type)), [orders, type]);
+  const ready = useMemo(
+    () => orders
+      .filter((o) => o.status === 'ready' && (type === 'all' || o.orderType === type))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [orders, type],
+  );
   const done = useMemo(
     () => orders
       .filter((o) => o.status === 'completed' && new Date(o.collectedAt ?? o.updatedAt).toDateString() === today && (type === 'all' || o.orderType === type))
@@ -97,6 +103,7 @@ export default function DispatchPage() {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="numeric text-3xl font-bold leading-none text-ink-900">{ticketLabel(o)}</p>
+            <div className="mt-1"><EditedBadge order={o} /></div>
             <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-ink-600">
               <Icon className="h-4 w-4 text-ink-400" /> {t(`kitchen.orderType.${o.orderType}`)}
               {o.customerName && <span className="truncate text-ink-400">· {o.customerName}</span>}
@@ -185,6 +192,7 @@ export default function DispatchPage() {
                 return (
                   <li key={o.id} className="flex items-center gap-3 px-3 py-2 max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-1 max-sm:py-3">
                     <span className="numeric w-16 font-bold text-ink-900">{ticketLabel(o)}</span>
+                    <EditedBadge order={o} />
                     <span className="inline-flex w-28 items-center gap-1 text-sm text-ink-600"><Icon className="h-4 w-4 text-ink-400" />{t(`kitchen.orderType.${o.orderType}`)}</span>
                     <span className="min-w-0 flex-1 truncate text-sm text-ink-600 max-sm:order-last max-sm:basis-full">{o.items.map((i) => `${i.quantity}× ${viewOf(i, language).name}`).join(' · ')}</span>
                     <span className="numeric text-xs text-ink-500">

@@ -24,6 +24,7 @@ import { elapsedSeconds, formatElapsed, prepMinutes, urgencyOf } from '@/types/k
 import type { KitchenOrder, KitchenOrderItem, KitchenOrderStatus, OrderType, UrgencyBand } from '@/types/kitchen';
 import type { PrintGroup } from '@/types/printing';
 import { playChime, ticketLabel, viewOf } from '@/features/kitchen/kds';
+import { EditedBadge } from '@/features/kitchen/EditedBadge';
 import { KitchenOrderDialog, type OrderAction } from '@/features/kitchen/KitchenOrderDialog';
 import { KitchenAnalytics } from '@/features/kitchen/KitchenAnalytics';
 
@@ -146,9 +147,8 @@ export default function KitchenPage() {
 
   const visible = useMemo(() => {
     const list = scoped.filter((o) => inTab(o, tab));
-    /* Waiting work oldest first; finished work newest first. */
-    const asc = tab === 'active' || tab === 'open' || tab === 'preparing';
-    return list.sort((a, b) => (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * (asc ? 1 : -1));
+    /* Newest order first on every tab. */
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [scoped, tab]);
 
   const lateCount = scoped.filter((o) => (o.status === 'open' || o.status === 'preparing') && urgencyOf(elapsedSeconds(o, now)) === 'late').length;
@@ -365,6 +365,7 @@ function Card({ order, now, language, fresh, inStation, onOpen, onPrimary }: {
         <header className="flex items-center justify-between gap-2 px-3 pb-1.5 pt-2">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="numeric text-lg font-bold text-ink-900 touch:text-xl">{ticketLabel(order)}</span>
+            <EditedBadge order={order} />
             <TypeIcon className="h-4 w-4 shrink-0 text-ink-400" aria-label={t(`kitchen.orderType.${order.orderType}`)} />
             {order.customerName && <span className="truncate text-xs text-ink-400">{order.customerName}</span>}
           </span>
@@ -448,6 +449,7 @@ function ListView({ orders, now, language, inStation, onOpen, onPrimary }: {
               <tr key={order.id} onClick={() => onOpen(order)} className="cursor-pointer hover:bg-ink-50/60">
                 <td className="whitespace-nowrap px-3 py-2">
                   <span className="numeric font-bold text-ink-900">{ticketLabel(order)}</span>
+                  <span className="ms-2"><EditedBadge order={order} /></span>
                   <span className="ms-2 inline-flex items-center gap-1 text-xs text-ink-500"><TypeIcon className="h-3.5 w-3.5" />{t(`kitchen.orderType.${order.orderType}`)}</span>
                 </td>
                 <td className="px-3 py-2 text-ink-700">

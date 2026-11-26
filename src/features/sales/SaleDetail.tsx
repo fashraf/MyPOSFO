@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
+import { orderStatus } from '@/lib/orderStatus';
 import { AlertTriangle, Ban, Link2, PencilLine, Printer, RotateCcw } from 'lucide-react';
 import { OrderTracker } from './OrderTracker';
 import { PrintDialog } from './PrintDialog';
@@ -251,6 +253,9 @@ export function SaleDetail({
             </div>
           )}
 
+          <div className="flex items-center gap-2">
+            <OrderStatusBadge status={orderStatus(sale, ticket)} />
+          </div>
           <OrderTracker stage={stage} paidAt={sale.soldAt} ticket={ticket} />
 
           {canEdit && !isVoided && kitchenStarted && (

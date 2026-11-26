@@ -3321,6 +3321,19 @@ export const en = {
     waiting: 'Waiting for pickup',
     collected: 'Collected',
   },
+  orderStatus: {
+    new: 'New',
+    preparing: 'Preparing',
+    ready: 'Ready',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    edited: 'Edited',
+    returned: 'Returned',
+    partially_returned: 'Partly returned',
+  },
+  kdsEdited: {
+    badge: 'Edited · was {order}',
+  },
   kdsDone: {
     open: '{order} moved back to Ordered',
     preparing: '{order} is being prepared',

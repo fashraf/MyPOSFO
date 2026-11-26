@@ -1,4 +1,7 @@
 import { CREDIT_SALES } from '@/config/features';
+import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
+import { useKitchenTickets } from '@/hooks/useKitchenTickets';
+import { orderStatus } from '@/lib/orderStatus';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, Banknote, CircleDollarSign, CreditCard, PackageOpen, Percent, Receipt, ShoppingBag, TrendingUp, Users, Wallet, Download } from 'lucide-react';
@@ -65,6 +68,7 @@ function changeRatio(current: number, previous: number): number | undefined {
 
 export default function DashboardPage() {
   const { t } = useTranslation();
+  const tickets = useKitchenTickets();
   const { language } = useI18n();
   const { activeBranch, user } = useSession();
   const firstName = user ? (language === 'ar' ? user.nameAr.split(' ')[0] : user.firstName) : '';
@@ -625,11 +629,7 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="flex items-center gap-2.5">
-                        {sale.status !== 'completed' && (
-                          <Badge tone={sale.status === 'voided' ? 'danger' : 'warning'}>
-                            {t(`sales.status.${sale.status}`)}
-                          </Badge>
-                        )}
+                        <OrderStatusBadge status={orderStatus(sale, tickets.get(sale.invoiceNumber))} />
                         <CurrencyDisplay
                           amount={sale.totalH}
                           className={cn(

@@ -184,6 +184,8 @@ const baseKitchenService = {
     /** 'ready' puts it straight on the collection board (nothing to cook). */
     startAs?: 'open' | 'ready';
     ticketNo?: number;
+    replacesOrder?: string;
+    replacesTicketNo?: number;
   }): Promise<KitchenOrder | null> {
     if (input.items.length === 0) return null;
 
@@ -197,6 +199,7 @@ const baseKitchenService = {
       customerName: input.customerName,
       orderType: input.orderType ?? 'takeaway',
       ticketNo: input.ticketNo,
+      ...(input.replacesOrder ? { replacesOrder: input.replacesOrder, replacesTicketNo: input.replacesTicketNo } : {}),
       totalH: input.totalH,
       items: input.items.map((item) => ({
         id: nextId('koi'),
