@@ -1,161 +1,58 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ChefHat,
-  Command,
-  FileText,
-  PackagePlus,
-  Plus,
-  ShoppingCart,
-  Tags,
-  UserPlus,
-  Users,
-  type LucideIcon,
-} from 'lucide-react';
-import { Modal } from '@/components/ui';
-import { cn } from '@/lib/cn';
+import { Zap } from 'lucide-react';
+import { Dropdown } from '@/components/ui/Dropdown';
+import { visibleNavigation, type NavItem } from '@/config/navigation';
+import { ROUTES } from '@/routes/paths';
 import { useSession } from '@/contexts/SessionContext';
 import { useTranslation } from '@/i18n';
-import { ROUTES } from '@/routes/paths';
-import type { PermissionKey } from '@/types/permissions';
-import type { TranslationKey } from '@/i18n';
 
-interface QuickAction {
-  id: string;
-  to: string;
-  labelKey: TranslationKey;
-  hintKey: TranslationKey;
-  icon: LucideIcon;
-  /** Hidden unless the person holds this. */
-  permission: PermissionKey;
-}
+/** The pages people jump between all day, in this order. Only those the person may open are shown. */
+const QUICK = ['pos', 'kitchen', 'collection', 'sales', 'restaurant', 'dashboard', 'catalog', 'inventory', 'discounts', 'customers', 'finance', 'settings'];
 
-const ACTIONS: QuickAction[] = [
-  { id: 'sale', to: ROUTES.pos, labelKey: 'quickLinks.newSale', hintKey: 'quickLinks.newSaleHint', icon: ShoppingCart, permission: 'pos.view' },
-  { id: 'product', to: ROUTES.catalog, labelKey: 'quickLinks.addProduct', hintKey: 'quickLinks.addProductHint', icon: Plus, permission: 'products.create' },
-  { id: 'restock', to: ROUTES.restock, labelKey: 'quickLinks.restock', hintKey: 'quickLinks.restockHint', icon: PackagePlus, permission: 'inventory.purchase_entry' },
-  { id: 'customer', to: ROUTES.customers, labelKey: 'quickLinks.addCustomer', hintKey: 'quickLinks.addCustomerHint', icon: UserPlus, permission: 'customers.create' },
-  { id: 'discount', to: ROUTES.discountNew, labelKey: 'quickLinks.addDiscount', hintKey: 'quickLinks.addDiscountHint', icon: Tags, permission: 'discounts.create' },
-  { id: 'user', to: ROUTES.userNew, labelKey: 'quickLinks.addUser', hintKey: 'quickLinks.addUserHint', icon: Users, permission: 'users.create' },
-  { id: 'kitchen', to: ROUTES.kitchen, labelKey: 'quickLinks.kitchen', hintKey: 'quickLinks.kitchenHint', icon: ChefHat, permission: 'pos.view' },
-  { id: 'bill', to: ROUTES.billBuilder, labelKey: 'quickLinks.billBuilder', hintKey: 'quickLinks.billBuilderHint', icon: FileText, permission: 'bill_builder.edit' },
-];
-
-export interface QuickLinksProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-/**
- * A small command palette.
- *
- * Filtered by permission for the same reason the menu is: offering someone a
- * shortcut to a page they will be turned away from is worse than not offering
- * it at all.
- */
-export function QuickLinks({ open, onClose }: QuickLinksProps) {
+export function QuickLinks({ className }: { className?: string }) {
   const { t } = useTranslation();
-  const { can } = useSession();
   const navigate = useNavigate();
+  const { permissions } = useSession();
 
-  const [query, setQuery] = useState('');
-  const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    if (open) {
-      setQuery('');
-      setActive(0);
-    }
-  }, [open]);
-
-  const available = useMemo(() => ACTIONS.filter((action) => can(action.permission)), [can]);
-
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase();
-    if (!needle) return available;
-    return available.filter((action) =>
-      `${t(action.labelKey)} ${t(action.hintKey)}`.toLocaleLowerCase().includes(needle),
+  const items = useMemo(() => {
+    const allowed = new Map<string, NavItem>(
+      visibleNavigation(permissions).flatMap((section) => section.items).map((item) => [item.id, item]),
     );
-  }, [available, query, t]);
+    return QUICK.flatMap((id) => {
+      const item = allowed.get(id);
+      if (!item) return [];
+      const Icon = item.icon;
+      const to = item.id === 'restaurant' ? ROUTES.restaurantSession : item.to;
+      return [{
+        key: item.id,
+        label: t(item.labelKey as never),
+        icon: Icon ? <Icon /> : undefined,
+        onSelect: () => navigate(to),
+      }];
+    });
+  }, [permissions, navigate, t]);
 
-  useEffect(() => {
-    setActive(0);
-  }, [query]);
-
-  function go(action: QuickAction) {
-    onClose();
-    navigate(action.to);
-  }
-
-  function onKeyDown(event: React.KeyboardEvent) {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      setActive((index) => Math.min(index + 1, filtered.length - 1));
-    }
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      setActive((index) => Math.max(index - 1, 0));
-    }
-    if (event.key === 'Enter' && filtered[active]) {
-      event.preventDefault();
-      go(filtered[active]);
-    }
-  }
+  if (items.length === 0) return null;
 
   return (
-    <Modal open={open} onClose={onClose} size="md" title={t('quickLinks.title')}>
-      <div className="space-y-3" onKeyDown={onKeyDown}>
-        <input
-          autoFocus
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t('quickLinks.search')}
-          className="w-full rounded-md border border-ink-200 bg-surface px-3 py-2 text-base text-ink-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25"
-        />
-
-        {filtered.length === 0 ? (
-          <p className="px-2 py-8 text-center text-sm text-ink-400">{t('quickLinks.noResults')}</p>
-        ) : (
-          <ul className="max-h-80 space-y-1 overflow-y-auto">
-            {filtered.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <li key={action.id}>
-                  <button
-                    type="button"
-                    onMouseEnter={() => setActive(index)}
-                    onClick={() => go(action)}
-                    className={cn(
-                      'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-start transition-colors',
-                      index === active ? 'bg-ink-100' : 'hover:bg-ink-50',
-                    )}
-                  >
-                    <span
-                      aria-hidden
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600"
-                    >
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-ink-900">
-                        {t(action.labelKey)}
-                      </span>
-                      <span className="block truncate text-2xs text-ink-400">
-                        {t(action.hintKey)}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <p className="flex items-center gap-1.5 border-t border-dashed border-ink-200 pt-2 text-2xs text-ink-400">
-          <Command aria-hidden className="h-3 w-3" />
-          {t('quickLinks.hint')}
-        </p>
-      </div>
-    </Modal>
+    <Dropdown
+      align="end"
+      className={className}
+      panelClassName="max-h-[70vh] w-56 overflow-y-auto"
+      trigger={
+        <button
+          type="button"
+          data-testid="quick-links"
+          aria-label={t('quickLinks.pages')}
+          title={t('quickLinks.pages')}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-ink-200 bg-surface px-2.5 text-sm text-ink-600 shadow-xs transition-colors hover:border-ink-300 hover:text-ink-900 max-md:h-10 max-md:w-10 max-md:justify-center max-md:border-0 max-md:px-0 max-md:shadow-none"
+        >
+          <Zap aria-hidden className="h-4 w-4 shrink-0" />
+          <span className="hidden lg:inline">{t('quickLinks.pages')}</span>
+        </button>
+      }
+      items={items}
+    />
   );
 }

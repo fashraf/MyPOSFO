@@ -10,6 +10,7 @@ import { useTranslation } from '@/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { NotificationBell } from '@/components/shell/NotificationBell';
 import { SmartSearch } from '@/components/shell/SmartSearch';
+import { QuickLinks } from '@/components/shell/QuickLinks';
 import { ThemeToggle } from '@/components/shell/ThemeToggle';
 import { useSession } from '@/contexts/SessionContext';
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -202,6 +203,8 @@ export function Header({ onOpenMobileNav, onToggleSidebar }: HeaderProps) {
         >
           <Search aria-hidden className="h-4.5 w-4.5" />
         </button>
+
+        <QuickLinks />
 
         <LanguageSwitcher variant="compact" className="hidden sm:inline-flex" />
 
