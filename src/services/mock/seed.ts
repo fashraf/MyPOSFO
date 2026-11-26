@@ -894,9 +894,17 @@ function cleanStart(seed: TenantSeed): TenantSeed {
     branches: only,
     customers: [],
     ingredients: [],
+    /* No sample records on a real business: discounts, vendors and commission staff are created by the owner. */
+    discounts: [],
+    vendors: [],
+    staff: [],
     catalog: seed.catalog.map((item) => ({ ...item, recipe: [] })),
     users: seed.users.map((user) => ({
       ...user,
+      /* Sample ID / health-card expiries and "last active" times are not real. */
+      documents: [],
+      nationality: undefined,
+      lastActiveAt: null,
       branchIds: user.branchIds.filter((b: string) => keep.has(b)),
       defaultBranchId: user.defaultBranchId && keep.has(user.defaultBranchId) ? user.defaultBranchId : (first?.id ?? null),
     })),

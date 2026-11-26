@@ -1,5 +1,5 @@
 import { HYBRID_TENANT } from '@/config/env';
-import { activateTenant, captureSlice } from '@/services/mock/db';
+import { activateTenant, captureSlice, patchSlice } from '@/services/mock/db';
 import { setCurrentMockUser } from '@/services/mock/sessionRef';
 import { HttpError } from '@/services/http';
 import { refreshSession } from '@/services/apiClient';
@@ -20,7 +20,16 @@ function attach(session: AuthSession): AuthSession {
   const access = captureSlice('access') as { users?: { id: string; email?: string }[] } | undefined;
   const email = (session.email ?? '').trim().toLowerCase();
   const local = email ? access?.users?.find((u) => (u.email ?? '').trim().toLowerCase() === email) : undefined;
-  setCurrentMockUser(local?.id ?? session.userId);
+  const id = local?.id ?? session.userId;
+  setCurrentMockUser(id);
+  /* "Last active" on the Users page: the real time this person signed in (saved to the server with the users list). */
+  if (access?.users?.some((u) => u.id === id)) {
+    const now = new Date().toISOString();
+    patchSlice<{ users: { id: string; lastActiveAt?: string | null }[] }>('access', (current) => ({
+      ...current,
+      users: current.users.map((u) => (u.id === id ? { ...u, lastActiveAt: now } : u)),
+    }));
+  }
   /* Every module not yet in its own server tables is loaded from (and saved to) the server store. */
   void startServerStore();
   return { ...session, tenantId: HYBRID_TENANT };

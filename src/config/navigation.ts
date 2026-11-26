@@ -5,7 +5,6 @@ import {
   ChefHat,
   HandPlatter,
   Building2,
-  Component,
   Contact,
   FileText,
   LayoutGrid,
@@ -150,13 +149,6 @@ const ALL_NAVIGATION: NavSection[] = [
       { id: 'apiPerformance', to: ROUTES.apiPerformance, labelKey: 'nav.apiPerformance', icon: Gauge, module: 'audit' },
     ],
   },
-  {
-    id: 'developer',
-    items: [
-      /* The design-system showcase: for whoever administers the product, not staff. */
-      { id: 'components', to: ROUTES.components, labelKey: 'nav.components', icon: Component, module: 'settings', requires: 'settings.edit' },
-    ],
-  },
 ];
 
 /** The menu without the features switched off in config/features.ts (single branch hides branch comparison too). */
@@ -230,7 +222,6 @@ export const ROUTE_ACCESS: { prefix: string; anyOf: PermissionKey[] }[] = [
   { prefix: '/devices', anyOf: ['devices.view'] },
   { prefix: '/audit', anyOf: ['audit.view'] },
   { prefix: '/api-performance', anyOf: ['audit.performance', 'audit.view'] },
-  { prefix: '/components', anyOf: ['settings.edit'] },
 ];
 
 export function accessFor(pathname: string): PermissionKey[] | null {
