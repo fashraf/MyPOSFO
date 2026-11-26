@@ -9,7 +9,7 @@
  *    every deploy, so a cached copy can never be stale.
  *  - Everything else (API calls, other origins, dev-server paths): untouched.
  */
-const VERSION = 'poscomplete-shell-v1';
+const VERSION = 'poscomplete-shell-v2';
 const SCOPE = new URL(self.registration.scope);
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'favicon.svg', 'icon-192.png'];
 
@@ -44,7 +44,8 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      /* no-store: never a page from the browser cache, so a deploy shows on the next open (https sites too). */
+      fetch(request, { cache: 'no-store' })
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();

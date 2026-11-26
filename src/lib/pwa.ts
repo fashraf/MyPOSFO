@@ -19,6 +19,14 @@ export function setupServiceWorker() {
 
   window.addEventListener('load', () => {
     const base = import.meta.env.BASE_URL || '/';
-    void navigator.serviceWorker.register(`${base}sw.js`, { scope: base }).catch(() => undefined);
+    void navigator.serviceWorker
+      .register(`${base}sw.js`, { scope: base, updateViaCache: 'none' })
+      .then((registration) => {
+        /* Look for a new version whenever the app comes back to the screen. */
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') void registration.update().catch(() => undefined);
+        });
+      })
+      .catch(() => undefined);
   });
 }

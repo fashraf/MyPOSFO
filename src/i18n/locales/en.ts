@@ -3329,6 +3329,7 @@ export const en = {
     collected: 'Collected',
   },
   orderTimeline: {
+    tabTrail: 'Audit trail',
     title: 'Order timeline',
     description: 'Every step of one order, with the time it happened and how long each step took.',
     pick: 'Pick an order',

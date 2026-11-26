@@ -1,3 +1,4 @@
+import { SAMPLE_ACTIVITY } from '@/config/env';
 import type { ListQuery, Paginated } from '@/types';
 import { HttpError } from '@/services/http';
 import { schedulePersist } from './db';
@@ -20,11 +21,14 @@ import { schedulePersist } from './db';
  * persisted without the method having to say so.
  */
 export function delay(ms = 220): Promise<void> {
+  /* The pause imitates network latency in the sales demo only. A real business (hybrid/server data) never waits:
+     these pauses chained up to 2-3 s before the print window and other screens appeared. */
+  const wait = SAMPLE_ACTIVITY ? ms : 0;
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve();
       schedulePersist();
-    }, ms);
+    }, wait);
   });
 }
 

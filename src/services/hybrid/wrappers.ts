@@ -102,6 +102,8 @@ export function hybridSales<T extends AnyService>(base: T): T {
           await Promise.all([syncSales(true), syncSessions(true)]);
           void syncCatalog(true).catch(() => undefined);
         },
+        /* The sale is committed: show the done screen now, lists catch up in the background. */
+        false,
       );
     },
 
@@ -160,8 +162,9 @@ export function hybridCategories<T extends AnyService>(base: T): T {
 
 /** Kitchen and collection boards shared through the server; the ticket logic itself stays here. */
 export function hybridKitchen<T extends AnyService>(base: T, tickets: () => { orderNumber: string; id: string; status: string }[]): T {
-  const write = (name: string) => async (...args: unknown[]) => {
-    await syncKitchen(true);
+  /* A new ticket needs no fresh download first, and nobody needs to wait for the board to refresh after it. */
+  const write = (name: string, fresh = true) => async (...args: unknown[]) => {
+    if (fresh) await syncKitchen(true);
     const before = structuredClone(tickets());
     return serverBacked(
       () => base[name](...args),
@@ -170,6 +173,7 @@ export function hybridKitchen<T extends AnyService>(base: T, tickets: () => { or
         return result;
       },
       () => syncKitchen(true),
+      fresh,
     );
   };
   return {
@@ -179,6 +183,6 @@ export function hybridKitchen<T extends AnyService>(base: T, tickets: () => { or
     restore: write('restore'),
     setItemProgress: write('setItemProgress'),
     cancelForOrder: write('cancelForOrder'),
-    createFromSale: write('createFromSale'),
+    createFromSale: write('createFromSale', false),
   } as T;
 }
