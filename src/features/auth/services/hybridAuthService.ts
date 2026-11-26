@@ -4,6 +4,7 @@ import { setCurrentMockUser } from '@/services/mock/sessionRef';
 import { HttpError } from '@/services/http';
 import { refreshSession } from '@/services/apiClient';
 import { tokenStore } from '@/services/tokenStore';
+import { startServerStore, stopServerStore } from '@/services/hybrid/serverStore';
 import type { AuthSession } from '../types/auth.types';
 import { apiAuthService } from './apiAuthService';
 
@@ -15,6 +16,8 @@ import { apiAuthService } from './apiAuthService';
 function attach(session: AuthSession): AuthSession {
   activateTenant(HYBRID_TENANT);
   setCurrentMockUser(session.userId);
+  /* Every module not yet in its own server tables is loaded from (and saved to) the server store. */
+  void startServerStore();
   return { ...session, tenantId: HYBRID_TENANT };
 }
 
@@ -51,6 +54,7 @@ export const hybridAuthService: typeof apiAuthService = {
 
   async signOut() {
     await apiAuthService.signOut();
+    stopServerStore();
     setCurrentMockUser(null);
   },
 };

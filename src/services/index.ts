@@ -86,7 +86,8 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     import('./kitchenService'),
     import('./taxService'),
     import('./printerService'),
-  ]).then(([rs, sales, catalog, perms, kitchen, tax, printers]) => {
+    import('./discountService'),
+  ]).then(([rs, sales, catalog, perms, kitchen, tax, printers, discounts]) => {
     (window as unknown as Record<string, unknown>).__pos = {
       restaurantSessionService: rs.restaurantSessionService,
       salesService: sales.salesService,
@@ -96,6 +97,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
       kitchenService: kitchen.kitchenService,
       taxService: tax.taxService,
       printerService: printers.printerService,
+      discountService: discounts.discountService,
     };
   });
 }
