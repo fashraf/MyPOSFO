@@ -53,6 +53,10 @@ export interface KitchenOrder extends Timestamped {
   collectedAt?: string;
   cancelledAt?: string;
   cancelReason?: string;
+  /** Set when this ticket comes from an edited order: the order number it replaces. */
+  replacesOrder?: string;
+  /** Ticket no. (#) of the order it replaces, for the "Edited" badge. */
+  replacesTicketNo?: number;
 }
 
 /** Minutes from order to ready, or null if not ready yet. */

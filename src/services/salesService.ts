@@ -121,6 +121,8 @@ export interface CommitSaleInput {
   payments: SalePayment[];
   customerId: string | null;
   discountH: number;
+  /** Set by an edit: the invoice this order replaces. */
+  replacesInvoice?: string;
   /** Cash handed over. Null when nothing was tendered in cash. */
   tenderedH: number | null;
   cashierName: string;
@@ -318,6 +320,7 @@ const baseSalesService = {
       idempotencyKey: input.idempotencyKey,
       tax: taxSnapshot(totals),
       orderType: input.orderType,
+      ...(input.replacesInvoice ? { replacesInvoice: input.replacesInvoice } : {}),
     };
 
     /* ZATCA: stamp the invoice into the chain before it is visible anywhere. */
@@ -478,10 +481,11 @@ const baseSalesService = {
 
     const replacement = await salesService.commit({
       ...input,
+      replacesInvoice: original.invoiceNumber,
       payments: mergePayments([...carried, ...input.topUp]),
     });
 
-    await salesService.voidSale(original.id, `Edited — replaced by ${replacement.invoiceNumber}`, actor, 'edited');
+    await salesService.voidSale(original.id, `Edited — replaced by ${replacement.invoiceNumber}`, actor, 'edited', replacement.invoiceNumber);
 
     if (USE_MOCKS) {
       sales = sales.map((sale) => {
@@ -547,7 +551,7 @@ const baseSalesService = {
    * should never have existed, so stock and balances go back in full and the
    * sale is excluded from revenue entirely.
    */
-  async voidSale(id: string, reason: string, actor: string, code?: CancelReasonCode): Promise<Sale> {
+  async voidSale(id: string, reason: string, actor: string, code?: CancelReasonCode, replacedByInvoice?: string): Promise<Sale> {
     await delay(400);
 
     const sale = sales.find((candidate) => candidate.id === id);
@@ -622,6 +626,7 @@ const baseSalesService = {
       voidedBy: actor,
       voidedAt: now,
       updatedAt: now,
+      ...(replacedByInvoice ? { replacedByInvoice } : {}),
     };
 
     sales = sales.map((candidate) => (candidate.id === id ? voided : candidate));

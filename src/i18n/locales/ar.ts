@@ -3290,6 +3290,19 @@ export const ar: Dictionary = {
     waiting: 'بانتظار الاستلام',
     collected: 'تم الاستلام',
   },
+  orderStatus: {
+    new: 'جديد',
+    preparing: 'قيد التحضير',
+    ready: 'جاهز',
+    completed: 'مكتمل',
+    cancelled: 'ملغي',
+    edited: 'معدّل',
+    returned: 'مرتجع',
+    partially_returned: 'مرتجع جزئياً',
+  },
+  kdsEdited: {
+    badge: 'معدّل · كان {order}',
+  },
   kdsDone: {
     open: 'أُعيد {order} إلى مطلوب',
     preparing: '{order} قيد التحضير',

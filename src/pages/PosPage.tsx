@@ -471,6 +471,7 @@ export default function PosPage() {
         items: prepItems,
         orderType,
         ticketNo: sale.orderNo,
+        ...(editing ? { replacesOrder: editing.invoiceNumber, replacesTicketNo: editing.orderNo } : {}),
         startAs: route === 'collection' ? 'ready' : 'open',
       });
     }

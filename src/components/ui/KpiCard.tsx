@@ -25,6 +25,8 @@ export interface KpiCardProps {
    */
   onClick?: () => void;
   className?: string;
+  /** Smaller padding and figure, for list pages where the cards are only a summary. */
+  compact?: boolean;
 }
 
 /** Thin bars, one highlighted at the peak — the reference's KPI glyph. */
@@ -55,6 +57,7 @@ export function KpiCard({
   hint,
   onClick,
   className,
+  compact = false,
 }: KpiCardProps) {
   const hasChange = typeof change === 'number' && Number.isFinite(change);
   const flat = hasChange && Math.abs(change) < 0.0005;
@@ -77,10 +80,10 @@ export function KpiCard({
         className,
       )}
     >
-      <div className="flex flex-1 items-start justify-between gap-2 px-3.5 pb-3 pt-3 sm:gap-3 sm:px-4 sm:pb-3.5 sm:pt-3.5">
+      <div className={cn('flex flex-1 items-start justify-between gap-2', compact ? 'px-3 py-2' : 'px-3.5 pb-3 pt-3 sm:gap-3 sm:px-4 sm:pb-3.5 sm:pt-3.5')}>
         <div className="min-w-0">
           <p className="eyebrow truncate">{label}</p>
-          <p className="numeric mt-1.5 truncate text-lg font-semibold tracking-tight text-ink-900 min-[400px]:text-xl sm:mt-2 sm:text-2xl">{value}</p>
+          <p className={cn('numeric truncate font-semibold tracking-tight text-ink-900', compact ? 'mt-0.5 text-md sm:text-lg' : 'mt-1.5 text-lg min-[400px]:text-xl sm:mt-2 sm:text-2xl')}>{value}</p>
         </div>
         {spark && spark.length > 1 ? (
           /* On a two-up phone grid the number needs the room more than the glyph. */
