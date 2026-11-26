@@ -16,8 +16,8 @@ import type { Sale, SaleLine } from '@/types/sales';
  * phone, a second till) sees the same day, the same orders and the same numbers.
  */
 
-const FRESH_MS = { catalog: 30_000, sessions: 2_000, sales: 3_000 } as const;
-const lastSync: Record<keyof typeof FRESH_MS, number> = { catalog: 0, sessions: 0, sales: 0 };
+const FRESH_MS = { catalog: 30_000, sessions: 2_000, sales: 3_000, kitchen: 2_000 } as const;
+const lastSync: Record<keyof typeof FRESH_MS, number> = { catalog: 0, sessions: 0, sales: 0, kitchen: 0 };
 const inFlight: Partial<Record<keyof typeof FRESH_MS, Promise<void>>> = {};
 
 function fresh(kind: keyof typeof FRESH_MS, force: boolean): boolean {
@@ -29,6 +29,7 @@ export function forceNextSync(): void {
   lastSync.catalog = 0;
   lastSync.sessions = 0;
   lastSync.sales = 0;
+  lastSync.kitchen = 0;
 }
 
 /** One request at a time per area; concurrent callers share it. */
@@ -178,5 +179,32 @@ export async function serverBacked<L, S>(
     /* The server may know something this device did not (another till opened the day): show the truth. */
     void refresh().catch(() => undefined);
     throw translate(error);
+  }
+}
+
+/* ---------------------------------------------------------------- kitchen */
+
+interface Ticket {
+  id: string;
+  orderNumber: string;
+  status: string;
+}
+
+/** Kitchen tickets from the server: the same board on the kitchen screen, the collection screen and every phone. */
+export function syncKitchen(force = false): Promise<void> {
+  if (fresh('kitchen', force)) return Promise.resolve();
+  return once('kitchen', async () => {
+    const tickets = await api.get<Ticket[]>('/api/kitchen/tickets', { query: { hours: 48 } });
+    patchSlice<{ orders: Ticket[] }>('kitchen', (current) => ({ ...current, orders: tickets }));
+  });
+}
+
+/** Send every ticket the local operation created or changed. */
+export async function pushChangedTickets(before: Ticket[], after: Ticket[]): Promise<void> {
+  const old = new Map(before.map((t) => [t.orderNumber, JSON.stringify(t)]));
+  const changed = after.filter((t) => old.get(t.orderNumber) !== JSON.stringify(t));
+  for (const ticket of changed) {
+    if (!/^\d+$/.test(ticket.orderNumber)) continue; // only orders the server numbered
+    await api.put(`/api/kitchen/tickets/${ticket.orderNumber}`, ticket);
   }
 }

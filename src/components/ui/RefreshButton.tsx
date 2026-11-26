@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { RotateCw } from 'lucide-react';
 import { SERVER_CORE } from '@/config/env';
 import { forceNextSync } from '@/services/hybrid/serverCore';
+import { refreshServerStore } from '@/services/hybrid/serverStore';
 import { useTranslation } from '@/i18n';
 import { cn } from '@/lib/cn';
 
@@ -17,7 +18,10 @@ export function RefreshButton({ onRefresh, className }: { onRefresh: () => unkno
     if (busy) return;
     setBusy(true);
     try {
-      if (SERVER_CORE) forceNextSync();
+      if (SERVER_CORE) {
+        forceNextSync();
+        void refreshServerStore().catch(() => undefined);
+      }
       await onRefresh();
     } finally {
       setBusy(false);

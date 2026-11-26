@@ -26,7 +26,7 @@ Backend lives in `fashraf/MyPosAPI`. Super admin (`MyPosSA`) comes later.
 
 ## Data modes
 - `VITE_DATA_SOURCE`: `mock` (browser only), `hybrid` (staging default: sign-in, catalog, restaurant sessions, sales and
-  audit through the server; other modules still in the browser database of `VITE_TENANT_ID`), `api` (everything server).
+  audit and kitchen in server tables; every other module synced through the server store `/api/store`, see `src/services/hybrid/serverStore.ts`), `api` (everything server).
 - Hybrid wrappers live in `src/services/hybrid/`. Moving a module to the server = port its API (MyPosAPI) + add a wrapper.
 
 ## Conventions

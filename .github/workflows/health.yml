@@ -6,7 +6,7 @@ on:
     - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
-      environment: { type: choice, options: [production, staging], default: production }
+      environment: { type: choice, options: [staging, production], default: staging }
 permissions:
   contents: read
   issues: write
@@ -19,7 +19,7 @@ jobs:
         with: { python-version: "3.12" }
       - name: Server access
         run: |
-          e=${{ inputs.environment || 'production' }}
+          e=${{ inputs.environment || 'staging' }}   # production is checked once it has been released
           mkdir -p ~/.ssh && printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id && chmod 600 ~/.ssh/id
           ssh-keygen -y -P '' -f ~/.ssh/id > /dev/null 2>&1 || { echo "::error::DEPLOY_SSH_KEY is not a usable private key. Paste the whole PRIVATE key (from -----BEGIN OPENSSH PRIVATE KEY----- to -----END OPENSSH PRIVATE KEY-----), not the .pub file, a PuTTY .ppk, or a key with a passphrase."; exit 1; }
           host=${{ secrets.DEPLOY_HOST_PRODUCTION }}; port=""; [[ "$e" == staging ]] && host=${{ secrets.DEPLOY_HOST_STAGING }} && port=":8080"

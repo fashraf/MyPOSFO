@@ -1160,6 +1160,7 @@ export const en = {
     identifierPlaceholder: 'you@example.com or +966 50 123 4567',
     identifierHelp: 'We will send a verification code to whichever you use.',
     passwordLabel: 'Password',
+    rememberMe: 'Remember me',
     continue: 'Continue',
     noAccount: 'New to the platform?',
     createAccount: 'Create a business account',

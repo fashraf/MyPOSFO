@@ -11,6 +11,7 @@ import { useAuth, isAuthSession } from '../context/AuthContext';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, DEMO_TENANTS } from '../services/authService';
 import type { DemoAccount } from '@/services/mock/tenants';
 import { useTranslation } from '@/i18n';
+import { tokenStore } from '@/services/tokenStore';
 
 type Mode = 'password' | 'pin';
 
@@ -51,6 +52,7 @@ export default function Login() {
   const [tenantFilter, setTenantFilter] = useState<string>('all');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => tokenStore.rememberMe);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [activePersona, setActivePersona] = useState<string | null>(null);
@@ -180,6 +182,21 @@ export default function Login() {
                   leadingAddon={<KeyRound aria-hidden />}
                 />
               </FormField>
+
+              {/* Remember me: stay signed in on this device until signing out (on by default). */}
+              <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-ink-700">
+                <input
+                  type="checkbox"
+                  data-testid="remember-me"
+                  className="h-4 w-4 rounded border-ink-300 accent-ink-900"
+                  checked={rememberMe}
+                  onChange={(event) => {
+                    setRememberMe(event.target.checked);
+                    tokenStore.setRememberMe(event.target.checked);
+                  }}
+                />
+                {t('auth.rememberMe')}
+              </label>
 
               <Button
                 type="submit"

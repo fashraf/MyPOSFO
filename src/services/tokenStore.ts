@@ -15,6 +15,20 @@ const REFRESH_KEY = 'nazad.refresh';
 
 let accessToken: string | null = null;
 let expiresAt: number | null = null;
+const REMEMBER_KEY = 'nazad.remember';
+
+/** "Remember me": the refresh token survives closing the tab/app (localStorage) instead of ending with it. */
+function remembered(): boolean {
+  try {
+    return localStorage.getItem(REMEMBER_KEY) !== '0';
+  } catch {
+    return false;
+  }
+}
+
+function store(): Storage {
+  return remembered() ? localStorage : sessionStorage;
+}
 
 export const tokenStore = {
   getAccessToken(): string | null {
@@ -32,16 +46,31 @@ export const tokenStore = {
     expiresAt = new Date(expiresAtUtc).getTime();
 
     try {
-      sessionStorage.setItem(REFRESH_KEY, refreshToken);
+      const target = store();
+      (target === localStorage ? sessionStorage : localStorage).removeItem(REFRESH_KEY);
+      target.setItem(REFRESH_KEY, refreshToken);
     } catch {
       /* Private browsing can refuse storage. The session still works for this
          tab; the person just signs in again after a refresh. */
     }
   },
 
+  /** Chosen on the sign-in screen; on by default. */
+  get rememberMe(): boolean {
+    return remembered();
+  },
+
+  setRememberMe(value: boolean): void {
+    try {
+      localStorage.setItem(REMEMBER_KEY, value ? '1' : '0');
+    } catch {
+      /* Storage blocked: the session simply ends with the tab. */
+    }
+  },
+
   getRefreshToken(): string | null {
     try {
-      return sessionStorage.getItem(REFRESH_KEY);
+      return localStorage.getItem(REFRESH_KEY) ?? sessionStorage.getItem(REFRESH_KEY);
     } catch {
       return null;
     }
@@ -53,6 +82,7 @@ export const tokenStore = {
 
     try {
       sessionStorage.removeItem(REFRESH_KEY);
+      localStorage.removeItem(REFRESH_KEY);
     } catch {
       /* Nothing to do. */
     }

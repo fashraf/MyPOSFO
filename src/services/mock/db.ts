@@ -152,8 +152,8 @@ export function flush(): void {
     // eslint-disable-next-line no-console
     console.warn('[mockdb] Could not persist demo data (storage full or blocked).', error);
   }
+  notifyFlushed();
 }
-
 /**
  * Throttled flush. Called after every mock operation via `delay()`.
  *
@@ -301,5 +301,42 @@ export function restoreSlices(snapshot: Record<string, unknown>): void {
     const adapter = slices.get(name);
     if (adapter) adapter.restore(data);
   }
+  schedulePersist();
+}
+
+/* -------------------------------------------------------------------------- */
+/* Server store (hybrid mode): every other module is kept on the server too    */
+/* -------------------------------------------------------------------------- */
+
+const flushListeners = new Set<() => void>();
+
+/** Called after every write to browser storage; the server store uses it to push what changed. */
+export function onFlush(listener: () => void): () => void {
+  flushListeners.add(listener);
+  return () => flushListeners.delete(listener);
+}
+
+export function notifyFlushed(): void {
+  for (const listener of flushListeners) {
+    try {
+      listener();
+    } catch {
+      /* A listener failing must never stop local saving. */
+    }
+  }
+}
+
+/** The slice's current state, or its stored snapshot when its service has not loaded yet. */
+export function captureSlice(name: string): unknown {
+  const adapter = slices.get(name);
+  if (adapter) return adapter.capture();
+  return pending[name];
+}
+
+/** Put the server's copy in place. A slice whose service has not loaded yet gets it when it registers. */
+export function restoreSlice(name: string, data: unknown): void {
+  const adapter = slices.get(name);
+  if (adapter) adapter.restore(data);
+  else pending[name] = data;
   schedulePersist();
 }

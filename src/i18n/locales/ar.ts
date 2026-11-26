@@ -1151,6 +1151,7 @@ export const ar: Dictionary = {
     identifierPlaceholder: 'you@example.com أو ‎+966 50 123 4567',
     identifierHelp: 'سنرسل رمز التحقق إلى ما تستخدمه.',
     passwordLabel: 'كلمة المرور',
+    rememberMe: 'تذكرني',
     continue: 'متابعة',
     noAccount: 'جديد على المنصة؟',
     createAccount: 'أنشئ حساب منشأة',

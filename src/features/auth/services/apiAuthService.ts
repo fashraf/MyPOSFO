@@ -174,7 +174,8 @@ export const apiAuthService = {
 
     const session = await api.post<SessionResponse>(
       '/api/auth/verify',
-      { challengeId: pendingChallengeId, code },
+      /* Remembered sessions are kept by the server for months and renewed on use. */
+      { challengeId: pendingChallengeId, code, rememberMe: tokenStore.rememberMe },
       { anonymous: true },
     );
 
