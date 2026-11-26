@@ -161,6 +161,8 @@ export async function serverBacked<L, S>(
   local: () => Promise<L>,
   server: (localResult: L) => Promise<S>,
   refresh: () => Promise<void>,
+  /** false: return as soon as the server confirmed, and refresh in the background (the till must not wait). */
+  awaitRefresh = true,
 ): Promise<S> {
   const before = snapshotSlices();
   let localResult: L;
@@ -172,7 +174,8 @@ export async function serverBacked<L, S>(
   }
   try {
     const result = await server(localResult);
-    await refresh();
+    if (awaitRefresh) await refresh();
+    else void refresh().catch(() => undefined);
     return result;
   } catch (error) {
     restoreSlices(before);

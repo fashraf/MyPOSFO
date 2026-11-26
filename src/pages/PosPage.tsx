@@ -464,7 +464,8 @@ export default function PosPage() {
     const route: KitchenRoute = settings?.kitchenRouting?.[orderType] ?? 'kitchen';
 
     if (prepItems.length > 0 && route !== 'none') {
-      await kitchenService.createFromSale({
+      /* Not awaited: the cashier sees the done screen at once; the ticket reaches the kitchen in the background. */
+      void kitchenService.createFromSale({
         orderNumber: sale.invoiceNumber,
         customerName: selectedCustomer ? selectedCustomer.nameEn : null,
         totalH: sale.totalH,
@@ -473,7 +474,7 @@ export default function PosPage() {
         ticketNo: sale.orderNo,
         ...(editing ? { replacesOrder: editing.invoiceNumber, replacesTicketNo: editing.orderNo } : {}),
         startAs: route === 'collection' ? 'ready' : 'open',
-      });
+      }).catch((error: unknown) => toast.error(t('pos.toast.failed'), error instanceof Error ? error.message : String(error)));
     }
     const prepLines = route === 'none' ? [] : prepItems;
     setRoutedTo(route);

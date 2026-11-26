@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useState } from 'react';
 import { Database, Eye, GitCompare, Hash, MapPin, ShieldAlert, ShieldCheck, ShieldX, Table2, UserRound, X } from 'lucide-react';
-import { useI18n } from '@/i18n';
+import { useI18n, useTranslation } from '@/i18n';
 import { exactTime, relativeTime } from '@/lib/relativeTime';
 import {
   Badge,
@@ -12,6 +12,7 @@ import {
   Pagination,
   SearchInput,
   Select,
+  Tabs,
 } from '@/components/ui';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { OrderTimeline } from '@/features/audit/OrderTimeline';
@@ -27,6 +28,8 @@ import { auditService as auditApi } from '@/services/auditService';
  * write to is worth nothing as evidence of what that user did.
  */
 export default function AuditPage() {
+  const { t } = useTranslation();
+  const [view, setView] = useState<'trail' | 'timeline'>('trail');
   const { error: showError } = useToast();
 
   const [rows, setRows] = useState<AuditRow[]>([]);
@@ -116,8 +119,20 @@ export default function AuditPage() {
         actions={<RefreshButton onRefresh={load} />}
       />
 
-      <OrderTimeline />
+      <Tabs
+        aria-label="Audit"
+        value={view}
+        onChange={(value) => setView(value as 'trail' | 'timeline')}
+        items={[
+          { value: 'trail', label: t('orderTimeline.tabTrail') },
+          { value: 'timeline', label: t('orderTimeline.title') },
+        ]}
+      />
 
+      {view === 'timeline' ? (
+        <OrderTimeline />
+      ) : (
+      <>
       <div className="flex flex-wrap items-end gap-3">
         <SearchInput
           value={search}
@@ -230,6 +245,8 @@ export default function AuditPage() {
         total={total}
         onPageChange={setPage}
       />
+      </>
+      )}
 
       {detail && <AuditDetailModal detail={detail as unknown as AuditDetail} onClose={() => setDetail(null)} />}
     </div>

@@ -3298,6 +3298,7 @@ export const ar: Dictionary = {
     collected: 'تم الاستلام',
   },
   orderTimeline: {
+    tabTrail: 'سجل التدقيق',
     title: 'المسار الزمني للطلب',
     description: 'كل خطوة في الطلب مع وقتها والمدة التي استغرقتها.',
     pick: 'اختر طلبًا',
