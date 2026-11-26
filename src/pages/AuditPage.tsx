@@ -14,6 +14,7 @@ import {
   Select,
 } from '@/components/ui';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { OrderTimeline } from '@/features/audit/OrderTimeline';
 import { useToast } from '@/contexts/ToastContext';
 import { auditApi as serverAudit, type AuditRow } from '@/services/api';
 import { auditService as auditApi } from '@/services/auditService';
@@ -114,6 +115,8 @@ export default function AuditPage() {
         description="Every change, who made it, and where they made it from."
         actions={<RefreshButton onRefresh={load} />}
       />
+
+      <OrderTimeline />
 
       <div className="flex flex-wrap items-end gap-3">
         <SearchInput

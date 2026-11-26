@@ -1,4 +1,5 @@
-import { USE_MOCKS } from '@/config/env';
+import { SERVER_CORE, USE_MOCKS } from '@/config/env';
+import { orderTimelineApi } from './api/orderTimelineApi';
 import { api } from './apiClient';
 import { clone, delay, nextId, timestamp } from './mock/store';
 import { registerSlice, schedulePersist } from './mock/db';
@@ -106,6 +107,34 @@ function touch(id: string) {
   schedulePersist();
 }
 
+async function printSaleNow(input: PrintSaleInput): Promise<PrintOutcome> {
+  const branchId = input.sale.branchId;
+  const list = forBranch(branchId);
+  const printer =
+    (input.printerId ? list.find((p) => p.id === input.printerId) : undefined) ??
+    list.find((p) => p.status === 'active' && p.defaultFor.includes(input.kind)) ??
+    null;
+  if (!printer) return { ok: false, printer: null, bytes: 0, error: 'No printer is set for this document.', errorCode: 'NO_PRINTER' };
+
+  const company = await companyService.get();
+
+  /* A4 and the device dialog use the HTML layouts. */
+  if (input.kind === 'a4' || printer.connection === 'system') {
+    const html = await renderDocument(input.kind === 'a4' ? 'a4' : input.kind, {
+      sale: input.sale, company, branchName: input.branchName, customer: input.customer ?? null, language: input.language, copies: printer.copies,
+    });
+    await printHtml(html, printer.copies);
+    touch(printer.id);
+    return { ok: true, printer, bytes: html.length };
+  }
+
+  const model = buildReceiptModel({
+    sale: input.sale, company, branchName: input.branchName, language: input.language,
+    kind: input.kind, dataSaver: printer.dataSaver,
+  });
+  return deliver(printer, model, input.sale.invoiceNumber, input.kind);
+}
+
 export const printerService = {
   async list(branchId: string | null): Promise<PrinterConfig[]> {
     if (!USE_MOCKS) return api.get('/api/printers', { query: { branchId: branchId ?? undefined } });
@@ -156,31 +185,10 @@ export const printerService = {
 
   /** Print an order on a printer (or the document's default). */
   async printSale(input: PrintSaleInput): Promise<PrintOutcome> {
-    const branchId = input.sale.branchId;
-    const list = forBranch(branchId);
-    const printer =
-      (input.printerId ? list.find((p) => p.id === input.printerId) : undefined) ??
-      list.find((p) => p.status === 'active' && p.defaultFor.includes(input.kind)) ??
-      null;
-    if (!printer) return { ok: false, printer: null, bytes: 0, error: 'No printer is set for this document.', errorCode: 'NO_PRINTER' };
-
-    const company = await companyService.get();
-
-    /* A4 and the device dialog use the HTML layouts. */
-    if (input.kind === 'a4' || printer.connection === 'system') {
-      const html = await renderDocument(input.kind === 'a4' ? 'a4' : input.kind, {
-        sale: input.sale, company, branchName: input.branchName, customer: input.customer ?? null, language: input.language, copies: printer.copies,
-      });
-      await printHtml(html, printer.copies);
-      touch(printer.id);
-      return { ok: true, printer, bytes: html.length };
-    }
-
-    const model = buildReceiptModel({
-      sale: input.sale, company, branchName: input.branchName, language: input.language,
-      kind: input.kind, dataSaver: printer.dataSaver,
-    });
-    return deliver(printer, model, input.sale.invoiceNumber, input.kind);
+    const outcome = await printSaleNow(input);
+    /* Recorded on the server for the order timeline (Audit trail). */
+    if (outcome.ok && SERVER_CORE) orderTimelineApi.logPrint(input.sale.invoiceNumber, input.kind, outcome.printer?.name);
+    return outcome;
   },
 
   async testPrint(printer: PrinterConfig, language: 'ar' | 'en'): Promise<PrintOutcome> {

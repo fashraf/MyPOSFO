@@ -5,6 +5,7 @@ import {
   Button,
   CurrencyDisplay,
   EmptyState,
+  KpiCard,
   LoadingState,
   PageHeader,
   SearchableSelect,
@@ -15,7 +16,9 @@ import { useSession } from '@/contexts/SessionContext';
 import { useI18n, useTranslation } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { formatPercent } from '@/lib/format';
-import { ledgerService, safeCall } from '@/services';
+import { ledgerService, safeCall, salesService } from '@/services';
+import { salesSnapshot } from '@/services/salesService';
+import type { Sale } from '@/types/sales';
 import { ACCOUNTS, accountBalanceH, monthKey } from '@/types/finance';
 import type { JournalEntry } from '@/types/finance';
 
@@ -100,13 +103,19 @@ export default function ProfitLossPage() {
   const { activeBranch } = useSession();
 
   const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState<string | null>(new Date().toISOString().slice(0, 7));
 
   const load = useCallback(async () => {
     setLoading(true);
-    const result = await safeCall(() => ledgerService.all(activeBranch?.id ?? null));
+    /* Revenue and cost of goods come from the sales on the server; expenses, payroll and rent from the ledger. */
+    const [result, saleResult] = await Promise.all([
+      safeCall(() => ledgerService.all(activeBranch?.id ?? null)),
+      safeCall(() => salesService.list({ page: 1, pageSize: 5000, branchId: activeBranch?.id ?? null })),
+    ]);
     if (result.ok) setEntries(result.data);
+    if (saleResult.ok) setSales(saleResult.data.items);
     setLoading(false);
   }, [activeBranch]);
 
@@ -123,11 +132,17 @@ export default function ProfitLossPage() {
    */
   const statement = useMemo(() => {
     const inMonth = entries.filter((entry) => monthKey(entry.postedAt) === month);
+    const soldInMonth = sales.filter((sale) => sale.status !== 'voided' && monthKey(sale.soldAt) === month);
+    const notesInMonth = salesSnapshot().creditNotes.filter((note) => monthKey(note.issuedAt) === month);
 
-    const salesH = accountBalanceH(inMonth, '4100');
-    const returnsH = accountBalanceH(inMonth, '4200');
+    /* Excluding VAT: VAT is owed to ZATCA, not earned. */
+    const salesH = soldInMonth.reduce((sum, sale) => sum + sale.subtotalH, 0);
+    const returnsH = notesInMonth.reduce((sum, note) => sum + note.subtotalH, 0);
     const netRevenueH = salesH - returnsH;
-    const cogsH = accountBalanceH(inMonth, '5100');
+    const cogsH = soldInMonth.reduce(
+      (sum, sale) => sum + sale.lines.reduce((lineSum, line) => lineSum + (line.unitCostH ?? 0) * line.quantity, 0),
+      0,
+    );
     const grossProfitH = netRevenueH - cogsH;
 
     const operating = [
@@ -151,9 +166,10 @@ export default function ProfitLossPage() {
       netProfitH: grossProfitH - operatingH,
       grossMargin: netRevenueH > 0 ? grossProfitH / netRevenueH : null,
       netMargin: netRevenueH > 0 ? (grossProfitH - operatingH) / netRevenueH : null,
-      hasActivity: inMonth.length > 0,
+      orders: soldInMonth.length,
+      hasActivity: inMonth.length > 0 || soldInMonth.length > 0 || notesInMonth.length > 0,
     };
-  }, [entries, month]);
+  }, [entries, sales, month]);
 
   if (loading) return <LoadingState className="py-20" />;
 
@@ -171,10 +187,6 @@ export default function ProfitLossPage() {
               onChange={setMonth}
               options={recentMonths().map((value) => ({ value, label: value }))}
             />
-
-      <FinanceTabs />
-
-      <ScopeBanner />
             <Button variant="outline" leadingIcon={<Printer />} onClick={() => window.print()}>
               {t('pnl.export')}
             </Button>
@@ -182,16 +194,40 @@ export default function ProfitLossPage() {
         }
       />
 
+      <FinanceTabs />
+
+      <ScopeBanner />
+
       {!statement.hasActivity ? (
         <div className="rounded-lg border border-dashed border-ink-300 bg-surface">
           <EmptyState title={t('pnl.empty.title')} description={t('pnl.empty.description')} />
         </div>
       ) : (
         <>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <KpiCard compact label={t('pnl.netRevenue')} value={<CurrencyDisplay amount={statement.netRevenueH} />} />
+            <KpiCard
+              compact
+              label={t('pnl.grossProfit')}
+              value={<CurrencyDisplay amount={statement.grossProfitH} />}
+            />
+            <KpiCard compact label={t('pnl.operating')} value={<CurrencyDisplay amount={statement.operatingH} />} />
+            <KpiCard
+              compact
+              label={statement.netProfitH < 0 ? t('pnl.loss') : t('pnl.netProfit')}
+              value={
+                <CurrencyDisplay
+                  amount={Math.abs(statement.netProfitH)}
+                  className={statement.netProfitH < 0 ? 'text-danger-700' : 'text-success-700'}
+                />
+              }
+            />
+          </div>
+
           {/* One document, not four cards. A statement is read top to bottom
               as a single sequence, and card borders between sections break the
               line the eye follows down the amount column. */}
-          <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-lg border border-ink-200 bg-surface shadow-xs">
+          <div className="w-full overflow-hidden rounded-lg border border-ink-200 bg-surface shadow-xs">
             <header className="border-b border-ink-200 px-5 py-3.5">
               <h2 className="text-base font-semibold text-ink-900">{t('pnl.title')}</h2>
               <p className="numeric text-xs text-ink-500">{month}</p>
@@ -288,7 +324,7 @@ export default function ProfitLossPage() {
             </div>
           </div>
 
-          <Alert tone="tip" compact className="mx-auto max-w-3xl">
+          <Alert tone="tip" compact>
             {t('pnl.accrualNote')}
           </Alert>
         </>
