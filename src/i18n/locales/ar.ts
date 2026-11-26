@@ -2755,6 +2755,12 @@ export const ar: Dictionary = {
     change: 'الباقي المعاد',
     refunded: 'أُعيد بعد التعديل',
     customer: 'العميل',
+    paidBy: 'طريقة الدفع',
+    how: {
+      cash: 'نقدًا',
+      card: 'شبكة (مدى/فيزا)',
+      credit: 'على حساب العميل (آجل)',
+    },
     method: {
       cash: 'مدفوع نقدًا',
       card: 'مدفوع بالشبكة (مدى/فيزا)',

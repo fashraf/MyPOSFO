@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
-import { orderStatus } from '@/lib/orderStatus';
 import { AlertTriangle, Ban, Link2, PencilLine, Printer, RotateCcw } from 'lucide-react';
 import { OrderTracker } from './OrderTracker';
 import { PrintDialog } from './PrintDialog';
@@ -240,7 +238,7 @@ export function SaleDetail({
           </div>
         }
       >
-        <div className="space-y-5">
+        <div className="space-y-3">
           {isVoided && (
             <div className="flex items-start gap-2.5 rounded-md border border-danger-200 bg-danger-50 px-3.5 py-3">
               <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-danger-600" />
@@ -253,9 +251,6 @@ export function SaleDetail({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <OrderStatusBadge status={orderStatus(sale, ticket)} />
-          </div>
           <OrderTracker stage={stage} paidAt={sale.soldAt} ticket={ticket} />
 
           {canEdit && !isVoided && kitchenStarted && (
@@ -272,39 +267,50 @@ export function SaleDetail({
           )}
 
           {/* How it was paid, in the words used at the counter. */}
-          <section className="space-y-2">
+          <section className="space-y-1.5">
             <h3 className="eyebrow">{t('payBreakdown.title')}</h3>
             <dl className="divide-y divide-ink-200 rounded-md border border-ink-200 text-sm">
-              <div className="flex justify-between px-4 py-2">
+              <div className="flex justify-between px-4 py-1.5">
                 <dt className="text-ink-500">{t('sales.detail.soldBy')}</dt>
                 <dd className="font-medium text-ink-900">{sale.cashierName}</dd>
               </div>
-              {sale.payments.map((payment) => (
-                <div key={payment.method} className="flex justify-between px-4 py-2">
-                  <dt className="text-ink-500">{t(`payBreakdown.method.${payment.method}`)}</dt>
-                  <dd><CurrencyDisplay amount={payment.amountH} className="font-medium text-ink-900" /></dd>
-                </div>
-              ))}
+              <div className="flex items-start justify-between gap-3 px-4 py-1.5">
+                <dt className="text-ink-500">{t('payBreakdown.paidBy')}</dt>
+                <dd className="text-end font-medium text-ink-900" data-testid="paid-by">
+                  {sale.payments.length === 0
+                    ? '—'
+                    : sale.payments.map((payment) => (
+                        <span key={payment.method} className="block">
+                          {t(`payBreakdown.how.${payment.method}`)}
+                          {sale.payments.length > 1 && (
+                            <span className="ms-1.5 font-normal text-ink-500">
+                              <CurrencyDisplay amount={payment.amountH} />
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                </dd>
+              </div>
               {sale.tenderedH !== null && sale.tenderedH > 0 && (
                 <>
-                  <div className="flex justify-between px-4 py-2">
+                  <div className="flex justify-between px-4 py-1.5">
                     <dt className="text-ink-500">{t('payBreakdown.given')}</dt>
                     <dd><CurrencyDisplay amount={sale.tenderedH} className="font-medium text-ink-900" /></dd>
                   </div>
-                  <div className="flex justify-between bg-success-50/60 px-4 py-2">
+                  <div className="flex justify-between bg-success-50/60 px-4 py-1.5">
                     <dt className="font-medium text-success-700">{t('payBreakdown.change')}</dt>
                     <dd><CurrencyDisplay amount={sale.changeH} className="font-semibold text-success-700" /></dd>
                   </div>
                 </>
               )}
               {(sale.refundH ?? 0) > 0 && (
-                <div className="flex justify-between bg-warning-50/60 px-4 py-2">
+                <div className="flex justify-between bg-warning-50/60 px-4 py-1.5">
                   <dt className="font-medium text-warning-700">{t('payBreakdown.refunded')}</dt>
                   <dd><CurrencyDisplay amount={sale.refundH!} className="font-semibold text-warning-700" /></dd>
                 </div>
               )}
               {customer && (
-                <div className="flex justify-between px-4 py-2">
+                <div className="flex justify-between px-4 py-1.5">
                   <dt className="text-ink-500">{t('payBreakdown.customer')}</dt>
                   <dd className="font-medium text-ink-900">{nameOf(customer)}</dd>
                 </div>
@@ -312,7 +318,7 @@ export function SaleDetail({
             </dl>
           </section>
 
-          <section className="space-y-2">
+          <section className="space-y-1.5">
             <h3 className="text-2xs font-semibold uppercase tracking-wider text-ink-400">
               {t('sales.detail.lines')}
             </h3>
@@ -369,7 +375,7 @@ export function SaleDetail({
             </div>
           </section>
 
-          <dl className="space-y-1.5 rounded-md border border-ink-200 bg-ink-50/60 p-4 text-sm">
+          <dl className="space-y-1 rounded-md border border-ink-200 bg-ink-50/60 px-4 py-2.5 text-sm">
             <div className="flex justify-between">
               <dt className="text-ink-500">{t('sales.columns.subtotal')}</dt>
               <dd>

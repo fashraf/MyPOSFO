@@ -2786,6 +2786,12 @@ export const en = {
     change: 'Change returned',
     refunded: 'Given back after edit',
     customer: 'Customer',
+    paidBy: 'Paid by',
+    how: {
+      cash: 'Cash',
+      card: 'Card (Mada/Visa)',
+      credit: 'Customer account (credit)',
+    },
     method: {
       cash: 'Paid in cash',
       card: 'Paid by card (Mada/Visa)',

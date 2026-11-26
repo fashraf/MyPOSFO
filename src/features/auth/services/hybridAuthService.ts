@@ -1,5 +1,5 @@
 import { HYBRID_TENANT } from '@/config/env';
-import { activateTenant } from '@/services/mock/db';
+import { activateTenant, captureSlice } from '@/services/mock/db';
 import { setCurrentMockUser } from '@/services/mock/sessionRef';
 import { HttpError } from '@/services/http';
 import { refreshSession } from '@/services/apiClient';
@@ -15,7 +15,12 @@ import { apiAuthService } from './apiAuthService';
  */
 function attach(session: AuthSession): AuthSession {
   activateTenant(HYBRID_TENANT);
-  setCurrentMockUser(session.userId);
+  /* The server's user id is not always the same number as in the browser's user list (the server may have had other
+     accounts first). Match by email, so the person signed in is the person shown as "Sold by". */
+  const access = captureSlice('access') as { users?: { id: string; email?: string }[] } | undefined;
+  const email = (session.email ?? '').trim().toLowerCase();
+  const local = email ? access?.users?.find((u) => (u.email ?? '').trim().toLowerCase() === email) : undefined;
+  setCurrentMockUser(local?.id ?? session.userId);
   /* Every module not yet in its own server tables is loaded from (and saved to) the server store. */
   void startServerStore();
   return { ...session, tenantId: HYBRID_TENANT };
