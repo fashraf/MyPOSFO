@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Settings2 } from 'lucide-react';
+import { ROUTES } from '@/routes/paths';
 import { CheckCircle2, Link2, QrCode, ShieldAlert, ShieldCheck } from 'lucide-react';
 import {
   Alert,
@@ -110,9 +113,14 @@ export default function ZatcaPage() {
         title={t('zatcaPage.title')}
         description={t('zatcaPage.description')}
         actions={
-          <Button variant="outline" onClick={() => void verify()} loading={verifying} leadingIcon={<Link2 />}>
-            {t('zatcaPage.verify')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to={ROUTES.zatcaSetup} data-testid="zatca-setup-link">
+              <Button leadingIcon={<Settings2 />}>{t('zatcaSetup.open')}</Button>
+            </Link>
+            <Button variant="outline" onClick={() => void verify()} loading={verifying} leadingIcon={<Link2 />}>
+              {t('zatcaPage.verify')}
+            </Button>
+          </div>
         }
       />
 

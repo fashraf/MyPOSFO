@@ -69,6 +69,7 @@ const UserFormPage = lazy(() => import('@/pages/access/UserFormPage'));
 const RolesPage = lazy(() => import('@/pages/access/RolesPage'));
 const RoleFormPage = lazy(() => import('@/pages/access/RoleFormPage'));
 const ZatcaPage = lazy(() => import('@/pages/ZatcaPage'));
+const ZatcaSetupPage = lazy(() => import('@/pages/ZatcaSetupPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 const Login = lazy(() => import('@/features/auth/pages/Login'));
@@ -115,6 +116,7 @@ export const router = createBrowserRouter([
           ...withoutRemoved([
           { index: true, element: <HomeRedirect /> },
           { path: ROUTES.zatca.slice(1), element: <Page><ZatcaPage /></Page> },
+          { path: ROUTES.zatcaSetup.slice(1), element: <Page><ZatcaSetupPage /></Page> },
           { path: ROUTES.dashboard.slice(1), element: <Page><DashboardPage /></Page> },
           { path: ROUTES.pos.slice(1), element: <Page><PosPage /></Page> },
           { path: ROUTES.sales.slice(1), element: <Page><SalesPage /></Page> },

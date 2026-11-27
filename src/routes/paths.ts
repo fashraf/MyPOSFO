@@ -43,6 +43,7 @@ export const ROUTES = {
   ledger: '/finance/ledger',
   shift: '/finance/cash',
   zatca: '/zatca',
+  zatcaSetup: '/zatca/setup',
   reports: '/reports',
   components: '/components',
 } as const;
