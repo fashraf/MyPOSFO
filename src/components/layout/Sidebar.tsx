@@ -1,6 +1,9 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { SERVER_CORE } from '@/config/env';
+import { companyService } from '@/services';
+import { useDataVersion } from '@/services/dataVersion';
 import { ChevronsUpDown, LogOut, PanelLeftClose, PanelLeftOpen, Store, User, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { visibleNavigation } from '@/config/navigation';
 import { useSession } from '@/contexts/SessionContext';
@@ -36,10 +39,29 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobil
   const location = useLocation();
   const sections = visibleNavigation(permissions);
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const companyVersion = useDataVersion('branches');
   const [signingOut, setSigningOut] = useState(false);
 
   const ar = language === 'ar';
-  const tenant = tenantById(session?.tenantId);
+  /* Connected to a server: the business's own name from its company profile (a SaaS client is never "Al-Noor"). */
+  const demoTenant = tenantById(session?.tenantId);
+  const [own, setOwn] = useState<{ nameAr: string; nameEn: string } | null>(null);
+  useEffect(() => {
+    if (!SERVER_CORE || !session) return;
+    let alive = true;
+    void companyService.get().then((c) => alive && setOwn({ nameAr: c.nameAr, nameEn: c.nameEn })).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [session, companyVersion]);
+  const tenant = SERVER_CORE
+    ? own && {
+        nameAr: own.nameAr || own.nameEn,
+        nameEn: own.nameEn || own.nameAr,
+        initials: (own.nameEn || own.nameAr).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join(''),
+        planAr: '', planEn: '',
+      }
+    : demoTenant;
   const personName = user ? (ar ? user.nameAr : user.nameEn) : session?.displayName ?? '';
   const roleName = role ? (ar ? role.nameAr : role.nameEn) : '';
 
@@ -72,7 +94,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobil
               {tenant ? (ar ? tenant.nameAr : tenant.nameEn) : t('common.appName')}
             </span>
             <span className="block truncate text-2xs text-ink-500">
-              {tenant ? (ar ? tenant.planAr : tenant.planEn) : `v${APP_VERSION}`}
+              {tenant && (ar ? tenant.planAr : tenant.planEn) ? (ar ? tenant.planAr : tenant.planEn) : `v${APP_VERSION}`}
             </span>
           </span>
         )}
