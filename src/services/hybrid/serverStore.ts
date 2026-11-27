@@ -17,7 +17,7 @@ import { captureSlice, onFlush, patchSlice, restoreSlice } from '@/services/mock
 /** Whole slices kept in the store. */
 const WHOLE = [
   'access', 'cash', 'company', 'devices', 'discounts', 'expenses', 'ingredients', 'inventory', 'ledger',
-  'notifications', 'payroll', 'periods', 'printGroups', 'printers', 'recurring', 'settings', 'tax',
+  'notifications', 'payroll', 'periods', 'printGroups', 'printers', 'recurring', 'settings', 'tax', 'currencySymbol',
 ] as const;
 
 /** Parts of the sales slice that are not in the server's sales tables (customers, credit notes, payments). */
