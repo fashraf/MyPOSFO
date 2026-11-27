@@ -1,5 +1,6 @@
 import { Building2, Layers } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { SessionScopeSwitch } from '@/components/shell/SessionScopeSwitch';
 import { useSession } from '@/contexts/SessionContext';
 import { useI18n, useTranslation } from '@/i18n';
 
@@ -11,6 +12,15 @@ import { useI18n, useTranslation } from '@/i18n';
  * above the figures it applies to.
  */
 export function ScopeBanner({ className }: { className?: string }) {
+  return (
+    <div className={cn('flex flex-wrap items-center gap-2', className)}>
+      <SessionScopeSwitch />
+      <BranchBanner />
+    </div>
+  );
+}
+
+function BranchBanner({ className }: { className?: string }) {
   const { t } = useTranslation();
   const { language } = useI18n();
   const { activeBranch, viewingAllBranches, branches } = useSession();

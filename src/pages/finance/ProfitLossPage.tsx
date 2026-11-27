@@ -18,6 +18,7 @@ import { cn } from '@/lib/cn';
 import { formatPercent } from '@/lib/format';
 import { ledgerService, safeCall, salesService } from '@/services';
 import { salesSnapshot } from '@/services/salesService';
+import { scopeWindow, useScopeEnabled } from '@/services/sessionScope';
 import type { Sale } from '@/types/sales';
 import { ACCOUNTS, accountBalanceH, monthKey } from '@/types/finance';
 import type { JournalEntry } from '@/types/finance';
@@ -104,6 +105,7 @@ export default function ProfitLossPage() {
 
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [scopeOn] = useScopeEnabled();
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState<string | null>(new Date().toISOString().slice(0, 7));
 
@@ -117,7 +119,7 @@ export default function ProfitLossPage() {
     if (result.ok) setEntries(result.data);
     if (saleResult.ok) setSales(saleResult.data.items);
     setLoading(false);
-  }, [activeBranch]);
+  }, [activeBranch, scopeOn]);
 
   useEffect(() => {
     void load();
@@ -131,9 +133,13 @@ export default function ProfitLossPage() {
    * expenses.
    */
   const statement = useMemo(() => {
-    const inMonth = entries.filter((entry) => monthKey(entry.postedAt) === month);
-    const soldInMonth = sales.filter((sale) => sale.status !== 'voided' && monthKey(sale.soldAt) === month);
-    const notesInMonth = salesSnapshot().creditNotes.filter((note) => monthKey(note.issuedAt) === month);
+    const inMonth = scopeOn ? entries : entries.filter((entry) => monthKey(entry.postedAt) === month);
+    /* Session scope: the sales list is already this session's; the month filter applies to "All history". */
+    const soldInMonth = sales.filter((sale) => sale.status !== 'voided' && (scopeOn || monthKey(sale.soldAt) === month));
+    const window = scopeWindow(activeBranch?.id ?? null);
+    const notesInMonth = salesSnapshot().creditNotes.filter((note) =>
+      window ? note.sessionId === window.sessionId : monthKey(note.issuedAt) === month,
+    );
 
     /* Excluding VAT: VAT is owed to ZATCA, not earned. */
     const salesH = soldInMonth.reduce((sum, sale) => sum + sale.subtotalH, 0);
@@ -169,7 +175,7 @@ export default function ProfitLossPage() {
       orders: soldInMonth.length,
       hasActivity: inMonth.length > 0 || soldInMonth.length > 0 || notesInMonth.length > 0,
     };
-  }, [entries, sales, month]);
+  }, [entries, sales, month, scopeOn, activeBranch]);
 
   if (loading) return <LoadingState className="py-20" />;
 

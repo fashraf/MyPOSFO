@@ -1,4 +1,5 @@
 import { RefreshButton } from '@/components/ui';
+import { useTicketScope } from '@/hooks/useTicketScope';
 import { newestOrderFirst } from '@/lib/orderSort';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bike, Check, HandPlatter, Package, ShoppingBag, Undo2, Utensils, type LucideIcon, Car } from 'lucide-react';
@@ -63,17 +64,18 @@ export default function DispatchPage() {
   void seen;
 
   const today = new Date().toDateString();
+  const sessionOrders = useTicketScope(orders);
   const ready = useMemo(
-    () => orders
+    () => sessionOrders
       .filter((o) => o.status === 'ready' && (type === 'all' || o.orderType === type))
       .sort(newestOrderFirst),
-    [orders, type],
+    [sessionOrders, type],
   );
   const done = useMemo(
-    () => orders
+    () => sessionOrders
       .filter((o) => o.status === 'completed' && new Date(o.collectedAt ?? o.updatedAt).toDateString() === today && (type === 'all' || o.orderType === type))
       .sort(newestOrderFirst),
-    [orders, type, today],
+    [sessionOrders, type, today],
   );
   const delivery = ready.filter((o) => o.orderType === 'delivery');
   const pickup = ready.filter((o) => o.orderType !== 'delivery');

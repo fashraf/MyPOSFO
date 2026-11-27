@@ -39,6 +39,7 @@ export { discountService, type ResolvedDiscount } from './discountService';
 export { kitchenService } from './kitchenService';
 export { ingredientService } from './ingredientService';
 export { billTemplateService, companyService } from './companyService';
+export { currencySymbolService } from './currencySymbolService';
 export { notificationService } from './notificationService';
 export { printGroupService, printService } from './printService';
 export { printerService, type PrintSaleInput } from './printerService';

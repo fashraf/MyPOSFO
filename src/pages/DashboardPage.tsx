@@ -1,4 +1,6 @@
 import { CREDIT_SALES } from '@/config/features';
+import { SessionScopeSwitch } from '@/components/shell/SessionScopeSwitch';
+import { useScopeEnabled } from '@/services/sessionScope';
 import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
 import { useKitchenTickets } from '@/hooks/useKitchenTickets';
 import { orderStatus } from '@/lib/orderStatus';
@@ -69,6 +71,7 @@ function changeRatio(current: number, previous: number): number | undefined {
 export default function DashboardPage() {
   const { t } = useTranslation();
   const tickets = useKitchenTickets();
+  const [scopeOn] = useScopeEnabled();
   const { language } = useI18n();
   const { activeBranch, user } = useSession();
   const firstName = user ? (language === 'ar' ? user.nameAr.split(' ')[0] : user.firstName) : '';
@@ -104,7 +107,7 @@ export default function DashboardPage() {
     }
 
     setLoading(false);
-  }, [period, activeBranch]);
+  }, [period, activeBranch, scopeOn]);
 
   useEffect(() => {
     void load();
@@ -191,12 +194,13 @@ export default function DashboardPage() {
         actions={
           <div className="flex w-full items-center gap-2 sm:w-auto">
           <RefreshButton onRefresh={load} />
+          <SessionScopeSwitch />
           <Tabs
-            className="min-w-0 flex-1 sm:flex-none"
             variant="pill"
             value={period}
             onChange={(value) => setPeriod(value as Period)}
             aria-label={t('dashboard.title')}
+            className={cn('min-w-0 flex-1 sm:flex-none', scopeOn && 'hidden')}
             items={[
               { value: 'today', label: t('dashboard.period.today') },
               { value: 'week', label: t('dashboard.period.week') },

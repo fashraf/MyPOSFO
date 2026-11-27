@@ -8,6 +8,7 @@ import { delay, nextId, timestamp, clone } from './mock/store';
 import { registerSlice } from './mock/db';
 import { seedFor } from './mock/seed';
 import { invalidate } from './dataVersion';
+import { setScopeProvider } from './sessionScope';
 import { kitchenService } from './kitchenService';
 import { salesSnapshot } from './salesService';
 import type { PermissionKey } from '@/types/permissions';
@@ -89,6 +90,26 @@ export interface HistoryFilter {
 const DEFAULT_SETTINGS: SessionSettings = { longSessionHours: 18, discrepancyThresholdH: 10_000 };
 
 let sessions: RestaurantSession[] = [];
+
+/* The session the screens are scoped to: the open one, else the one just closed. Time-only records (expenses) count
+   from shortly before it opened (device clocks drift) but never from before the previous session closed. */
+setScopeProvider((branchId) => {
+  const mine = sessions
+    .filter((x) => !branchId || x.branchId === branchId)
+    .sort((a, b) => b.openedAt.localeCompare(a.openedAt));
+  const current = mine.find((x) => x.status === 'open') ?? mine[0];
+  if (!current) return null;
+  const previous = mine.find((x) => x.id !== current.id && x.closedAt && x.closedAt <= current.openedAt);
+  const grace = new Date(Date.parse(current.openedAt) - 5 * 60_000).toISOString();
+  const start = previous?.closedAt && previous.closedAt > grace ? previous.closedAt : grace;
+  return {
+    sessionId: current.id,
+    number: current.number,
+    status: current.status === 'open' ? 'open' : 'closed',
+    start,
+    end: current.closedAt ?? '9999-12-31T23:59:59.999Z',
+  };
+});
 let movements: CashMovement[] = [];
 let audit: SessionAuditEntry[] = [];
 let settings: SessionSettings = { ...DEFAULT_SETTINGS };

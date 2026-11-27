@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { CurrencyPanel } from '@/features/settings/CurrencyPanel';
 import { Copy, Save } from 'lucide-react';
 import {
   Alert,
@@ -149,7 +150,7 @@ export default function SettingsPage() {
         title={t('settings.title')}
         description={tab === 'tax' ? t('taxSettings.pageDescription') : t('settings.description', { branch: nameOf(activeBranch) })}
         actions={
-          tab !== 'tax' && tab !== 'printers' && (
+          tab !== 'tax' && tab !== 'printers' && tab !== 'currency' && (
             <Button leadingIcon={<Save />} onClick={() => setConfirmingSave(true)} loading={saving} disabled={!dirty} data-testid="settings-save">
               {t('common.saveChanges')}
             </Button>
@@ -165,11 +166,13 @@ export default function SettingsPage() {
           { value: 'tax', label: t('settings.tabs.tax') },
           { value: 'orders', label: t('settings.tabs.orders') },
           { value: 'printers', label: t('settings.tabs.printers') },
+          { value: 'currency', label: t('currencySymbol.tab') },
         ]}
       />
 
       {tab === 'tax' && <TaxSettingsPanel />}
       {tab === 'printers' && <PrintersPanel />}
+      {tab === 'currency' && <CurrencyPanel />}
 
       {tab === 'orders' && (
         <>

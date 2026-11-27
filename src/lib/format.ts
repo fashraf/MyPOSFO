@@ -1,4 +1,5 @@
 import type { Language } from '@/i18n/config';
+import { currencySymbol, symbolText } from './currencySymbol';
 
 const LOCALES: Record<Language, string> = {
   ar: 'ar-SA',
@@ -59,16 +60,19 @@ export function formatCurrency(
 
   const value = fromMinorUnits ? amount / 100 : amount;
 
-  const formatted = new Intl.NumberFormat(localeFor(language), {
-    style: withSymbol ? 'currency' : 'decimal',
-    currency,
-    currencyDisplay: 'code',
+  const number = new Intl.NumberFormat(localeFor(language), {
+    style: 'decimal',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
     numberingSystem: 'latn',
-  }).format(value);
+  }).format(Math.abs(value));
+  if (!withSymbol) return value < 0 ? `-${number}` : number;
 
-  return formatted;
+  /* Settings → Currency decides the label and which side it sits on. */
+  const setting = currencySymbol();
+  const label = symbolText(currency, setting);
+  const sign = value < 0 ? '-' : '';
+  return setting.position === 'after' ? `${sign}${number} ${label}` : `${sign}${label} ${number}`;
 }
 
 /** Format a plain number with grouping. */

@@ -1,4 +1,5 @@
 import { SAMPLE_ACTIVITY } from '@/config/env';
+import { inScopeTime, scopeWindow } from './sessionScope';
 import { USE_MOCKS } from '@/config/env';
 import { expenseApi, reversalApi } from './api';
 import { toExpense } from './mappers/saleMappers';
@@ -164,9 +165,11 @@ export const expenseService = {
     }
 
     await delay(200);
-    return [...expenses].sort(
-      (a, b) => new Date(b.paidOn).getTime() - new Date(a.paidOn).getTime(),
-    );
+    /* Session scope: expenses recorded during this session (by when they were entered). */
+    const window = scopeWindow(null);
+    return expenses
+      .filter((expense) => inScopeTime(expense.createdAt ?? expense.paidOn, window))
+      .sort((a, b) => new Date(b.paidOn).getTime() - new Date(a.paidOn).getTime());
   },
 
   async get(id: string): Promise<Expense> {
