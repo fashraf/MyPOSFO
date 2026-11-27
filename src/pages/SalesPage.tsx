@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { SessionScopeSwitch } from '@/components/shell/SessionScopeSwitch';
 import { useNavigate } from 'react-router-dom';
 import { Receipt, RotateCcw, TrendingUp } from 'lucide-react';
 import {
@@ -228,7 +229,16 @@ export default function SalesPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={t('sales.title')} description={t('sales.description')} actions={<RefreshButton onRefresh={load} />} />
+      <PageHeader
+        title={t('sales.title')}
+        description={t('sales.description')}
+        actions={
+          <div className="flex items-center gap-2">
+            <SessionScopeSwitch />
+            <RefreshButton onRefresh={load} />
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <KpiCard

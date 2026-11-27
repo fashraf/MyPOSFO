@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTicketScope } from '@/hooks/useTicketScope';
 import { newestOrderFirst } from '@/lib/orderSort';
 import {
   BarChart3,
@@ -130,15 +131,16 @@ export default function KitchenPage() {
   );
 
   /* Today only, filtered by station and type; the tab is applied last so the counts stay honest. */
+  const sessionOrders = useTicketScope(orders);
   const scoped = useMemo(() => {
     const today = new Date().toDateString();
-    return orders.filter(
+    return sessionOrders.filter(
       (o) =>
         (o.status === 'open' || o.status === 'preparing' || new Date(o.createdAt).toDateString() === today) &&
         o.items.some(inStation) &&
         (typeFilter === 'all' || o.orderType === typeFilter),
     );
-  }, [orders, inStation, typeFilter]);
+  }, [sessionOrders, inStation, typeFilter]);
 
   const counts = useMemo(() => {
     const c: Record<Tab, number> = { active: 0, open: 0, preparing: 0, done: 0, cancelled: 0 };

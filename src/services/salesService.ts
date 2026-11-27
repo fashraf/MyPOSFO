@@ -1,5 +1,6 @@
 import { USE_MOCKS } from '@/config/env';
 import { newestInvoiceFirst } from '@/lib/orderSort';
+import { inScope, scopeWindow, setReferenceProvider } from './sessionScope';
 import { customerApi, salesApi } from './api';
 import { invalidate } from './dataVersion';
 import { num, toCustomer, toSale } from './mappers/saleMappers';
@@ -73,6 +74,21 @@ let receiptSequence = 700000;
 let zatcaChain: ZatcaChain = { icv: 0, lastHash: GENESIS_PIH };
 
 /** Read-only view for the restaurant session totals. Never mutate. */
+/* Ledger entries carry the invoice or credit-note number; these say which session each number belongs to. */
+setReferenceProvider((sessionId) => {
+  const refs = new Set<string>();
+  for (const sale of sales) {
+    if (sale.sessionId === sessionId || sale.voidSessionId === sessionId) refs.add(sale.invoiceNumber);
+  }
+  for (const note of creditNotes) if (note.sessionId === sessionId) refs.add(note.noteNumber);
+  return refs;
+});
+
+/** A sale counts in the scoped session when it was sold there (a cancel in a later session is that session's refund). */
+function saleInScope(sale: Sale, branchId?: string | null): boolean {
+  return inScope(sale.sessionId, scopeWindow(branchId ?? sale.branchId));
+}
+
 export function salesSnapshot(): { sales: Sale[]; creditNotes: CreditNote[] } {
   return { sales, creditNotes };
 }
@@ -524,7 +540,7 @@ const baseSalesService = {
 
     /* Branch first: a cashier in Jeddah should never page through Riyadh's
        invoices looking for their own. */
-    const scoped = sales.filter((sale) => inBranch(sale.branchId, query?.branchId));
+    const scoped = sales.filter((sale) => inBranch(sale.branchId, query?.branchId) && saleInScope(sale, query?.branchId));
 
     const filtered = query?.search
       ? scoped.filter((sale) => matches(sale.invoiceNumber, query.search ?? ''))
@@ -752,11 +768,17 @@ const baseSalesService = {
     const live = sales
       .filter((sale) => inBranch(sale.branchId, branchId))
       .filter((sale) => sale.status !== 'voided');
-    const inWindow = live.filter((sale) => new Date(sale.soldAt).getTime() >= start);
-    const inPrevious = live.filter((sale) => {
-      const time = new Date(sale.soldAt).getTime();
-      return time >= previousStart && time < start;
-    });
+    /* "This session" on: only this session's sales, and nothing to compare against (a new session starts at zero). */
+    const window = scopeWindow(branchId);
+    const inWindow = window
+      ? live.filter((sale) => sale.sessionId === window.sessionId)
+      : live.filter((sale) => new Date(sale.soldAt).getTime() >= start);
+    const inPrevious = window
+      ? []
+      : live.filter((sale) => {
+          const time = new Date(sale.soldAt).getTime();
+          return time >= previousStart && time < start;
+        });
 
     const measure = (group: Sale[]) => {
       const salesH = group.reduce((sum, sale) => sum + sale.totalH, 0);
@@ -861,11 +883,18 @@ const baseSalesService = {
             { bucket: 'Over 90 days', amountH: 31000, customers: 1 },
           ]
         : [
-            {
-              bucket: 'Current',
-              amountH: customers.reduce((sum, c) => sum + Math.max(0, c.balanceH ?? 0), 0),
-              customers: customers.filter((c) => (c.balanceH ?? 0) > 0).length,
-            },
+            window
+              ? {
+                  /* Session scope: credit given during this session only. */
+                  bucket: 'Current',
+                  amountH: inWindow.flatMap((sale) => sale.payments).filter((p) => p.method === 'credit').reduce((sum, p) => sum + p.amountH, 0),
+                  customers: new Set(inWindow.filter((sale) => sale.payments.some((p) => p.method === 'credit')).map((sale) => sale.customerId)).size,
+                }
+              : {
+                  bucket: 'Current',
+                  amountH: customers.reduce((sum, c) => sum + Math.max(0, c.balanceH ?? 0), 0),
+                  customers: customers.filter((c) => (c.balanceH ?? 0) > 0).length,
+                },
             { bucket: '31-60 days', amountH: 0, customers: 0 },
             { bucket: '61-90 days', amountH: 0, customers: 0 },
             { bucket: 'Over 90 days', amountH: 0, customers: 0 },
@@ -907,7 +936,7 @@ const baseSalesService = {
     }
 
     await delay(140);
-    return sales.filter((sale) => inBranch(sale.branchId, branchId)).sort(newestInvoiceFirst).slice(0, limit);
+    return sales.filter((sale) => inBranch(sale.branchId, branchId) && saleInScope(sale, branchId)).sort(newestInvoiceFirst).slice(0, limit);
   },
 
   /** Headline figures for today, used by the POS strip and the dashboard. */

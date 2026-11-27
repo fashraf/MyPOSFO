@@ -3320,6 +3320,12 @@ export const ar: Dictionary = {
       edited: 'معدّل',
     },
   },
+  sessionScope: {
+    label: 'نطاق الأرقام',
+    session: 'هذه الجلسة',
+    closed: 'مغلقة',
+    all: 'كل السجل',
+  },
   orderStatus: {
     new: 'جديد',
     preparing: 'قيد التحضير',

@@ -7,6 +7,7 @@ import { ACCOUNTS, accountBalanceH, reverseLines, validateEntry } from '@/types/
 import { HttpError } from './http';
 import { delay, inBranch, nextId, notFound, timestamp } from './mock/store';
 import { registerSlice } from './mock/db';
+import { entryInScope, scopeWindow } from './sessionScope';
 
 /**
  * The ledger.
@@ -200,7 +201,9 @@ export const ledgerService = {
     await delay(200);
     await ensureHistory();
 
+    const window = scopeWindow(query.branchId);
     return entries.filter((entry) => {
+      if (!entryInScope(entry.sourceReference, entry.postedAt, window)) return false;
       if (query.from && entry.postedAt < query.from) return false;
       if (query.to && entry.postedAt > `${query.to}T23:59:59.999Z`) return false;
       if (query.kind && entry.kind !== query.kind) return false;
@@ -327,6 +330,7 @@ export const ledgerService = {
 
     await delay(160);
     await ensureHistory();
-    return entries.filter((entry) => inBranch(entry.branchId, branchId));
+    const window = scopeWindow(branchId);
+    return entries.filter((entry) => inBranch(entry.branchId, branchId) && entryInScope(entry.sourceReference, entry.postedAt, window));
   },
 };

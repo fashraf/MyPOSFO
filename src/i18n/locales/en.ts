@@ -3351,6 +3351,12 @@ export const en = {
       edited: 'Edited',
     },
   },
+  sessionScope: {
+    label: 'What the figures cover',
+    session: 'This session',
+    closed: 'closed',
+    all: 'All history',
+  },
   orderStatus: {
     new: 'New',
     preparing: 'Preparing',
