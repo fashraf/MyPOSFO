@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { newestOrderFirst } from '@/lib/orderSort';
 import {
   BarChart3,
   Bell,
@@ -148,7 +149,7 @@ export default function KitchenPage() {
   const visible = useMemo(() => {
     const list = scoped.filter((o) => inTab(o, tab));
     /* Newest order first on every tab. */
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list.sort(newestOrderFirst);
   }, [scoped, tab]);
 
   const lateCount = scoped.filter((o) => (o.status === 'open' || o.status === 'preparing') && urgencyOf(elapsedSeconds(o, now)) === 'late').length;
@@ -359,7 +360,10 @@ function Card({ order, now, language, fresh, inStation, onOpen, onPrimary }: {
   const action = primaryLabel(order, t as never);
 
   return (
-    <article className={cn('flex flex-col overflow-hidden rounded-xl border border-ink-200 bg-surface shadow-xs', fresh && 'ring-2 ring-info-300', order.status === 'cancelled' && 'opacity-75')}>
+    <article
+      data-late={live && band === 'late' ? 'true' : undefined}
+      className={cn('flex flex-col overflow-hidden rounded-xl border border-ink-200 bg-surface shadow-xs', fresh && 'ring-2 ring-info-300', order.status === 'cancelled' && 'opacity-75', live && band === 'late' && 'blink-alert')}
+    >
       {live && <span aria-hidden className={cn('h-1', STRIP[band])} />}
       <button type="button" onClick={onOpen} className="flex-1 text-start hover:bg-ink-50/60">
         <header className="flex items-center justify-between gap-2 px-3 pb-1.5 pt-2">

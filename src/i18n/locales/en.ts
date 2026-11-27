@@ -4148,6 +4148,9 @@ export const en = {
   today: {
     newOrder: 'New order',
     closedHint: 'Open the restaurant to take orders',
+    openFor: 'Open for',
+    closedFor: 'Closed for',
+    overDay: 'over 24 hours',
     given: 'Given',
     show: 'Show',
   },

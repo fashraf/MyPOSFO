@@ -331,3 +331,13 @@
     font-size: 16px !important;
   }
 }
+
+/* Something needs attention now: a late kitchen order, a restaurant open or closed for over 24 hours. */
+@keyframes blink-alert {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0); border-color: rgb(var(--danger-300, 252 165 165)); }
+  50% { box-shadow: 0 0 0 4px rgb(220 38 38 / 0.45); border-color: rgb(220 38 38); }
+}
+.blink-alert { animation: blink-alert 1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .blink-alert { animation: none; box-shadow: 0 0 0 3px rgb(220 38 38 / 0.5); }
+}

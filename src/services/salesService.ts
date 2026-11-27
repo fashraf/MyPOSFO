@@ -1,4 +1,5 @@
 import { USE_MOCKS } from '@/config/env';
+import { newestInvoiceFirst } from '@/lib/orderSort';
 import { customerApi, salesApi } from './api';
 import { invalidate } from './dataVersion';
 import { num, toCustomer, toSale } from './mappers/saleMappers';
@@ -529,7 +530,7 @@ const baseSalesService = {
       ? scoped.filter((sale) => matches(sale.invoiceNumber, query.search ?? ''))
       : scoped;
 
-    return paginate(compareBy(filtered, 'soldAt', 'desc'), query);
+    return paginate([...filtered].sort(newestInvoiceFirst), query);
   },
 
   async get(id: string): Promise<Sale> {
@@ -906,11 +907,7 @@ const baseSalesService = {
     }
 
     await delay(140);
-    return compareBy(
-      sales.filter((sale) => inBranch(sale.branchId, branchId)),
-      'soldAt',
-      'desc',
-    ).slice(0, limit);
+    return sales.filter((sale) => inBranch(sale.branchId, branchId)).sort(newestInvoiceFirst).slice(0, limit);
   },
 
   /** Headline figures for today, used by the POS strip and the dashboard. */

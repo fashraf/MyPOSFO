@@ -1,4 +1,5 @@
 import { RefreshButton } from '@/components/ui';
+import { newestOrderFirst } from '@/lib/orderSort';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bike, Check, HandPlatter, Package, ShoppingBag, Undo2, Utensils, type LucideIcon, Car } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui';
@@ -65,13 +66,13 @@ export default function DispatchPage() {
   const ready = useMemo(
     () => orders
       .filter((o) => o.status === 'ready' && (type === 'all' || o.orderType === type))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+      .sort(newestOrderFirst),
     [orders, type],
   );
   const done = useMemo(
     () => orders
       .filter((o) => o.status === 'completed' && new Date(o.collectedAt ?? o.updatedAt).toDateString() === today && (type === 'all' || o.orderType === type))
-      .sort((a, b) => new Date(b.collectedAt ?? b.updatedAt).getTime() - new Date(a.collectedAt ?? a.updatedAt).getTime()),
+      .sort(newestOrderFirst),
     [orders, type, today],
   );
   const delivery = ready.filter((o) => o.orderType === 'delivery');
