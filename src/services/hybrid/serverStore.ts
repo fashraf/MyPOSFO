@@ -21,7 +21,8 @@ const WHOLE = [
 ] as const;
 
 /** Parts of the sales slice that are not in the server's sales tables (customers, credit notes, payments). */
-const SALES_EXTRAS = ['customers', 'creditNotes', 'creditNoteSequence', 'paymentsStore', 'receiptSequence'] as const;
+/* Credit notes are in the server's own tables now (returns), so they are not here. */
+const SALES_EXTRAS = ['customers', 'paymentsStore', 'receiptSequence'] as const;
 
 type Name = (typeof WHOLE)[number] | 'salesExtras';
 const NAMES: Name[] = [...WHOLE, 'salesExtras'];

@@ -1,6 +1,7 @@
 import { HYBRID_TENANT } from '@/config/env';
 import { api } from '@/services/apiClient';
 import { HttpError } from '@/services/http';
+import { invalidate } from '@/services/dataVersion';
 import { activateTenant, patchSlice, restoreSlices, snapshotSlices } from '@/services/mock/db';
 import type { CatalogItem, Category } from '@/types/catalog';
 import type { CashMovement, RestaurantSession, SessionAuditEntry } from '@/types/restaurantSession';
@@ -117,8 +118,11 @@ export function syncSales(force = false): Promise<void> {
   if (fresh('sales', force)) return Promise.resolve();
   return once('sales', async () => {
     const since = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
-    const page = await api.get<Page<Sale>>('/api/sales', { query: { pageSize: 2000, from: since } });
-    patchSlice<{ sales: Sale[] }>('sales', (current) => ({ ...current, sales: page.items }));
+    const [page, notes] = await Promise.all([
+      api.get<Page<Sale>>('/api/sales', { query: { pageSize: 2000, from: since } }),
+      api.get<unknown[]>('/api/sales/credit-notes', { query: { from: since } }),
+    ]);
+    patchSlice<{ sales: Sale[]; creditNotes: unknown[] }>('sales', (current) => ({ ...current, sales: page.items, creditNotes: notes }));
   });
 }
 
@@ -179,8 +183,12 @@ export async function serverBacked<L, S>(
     return result;
   } catch (error) {
     restoreSlices(before);
+    /* Every screen redraws from the restored data: a refused close must never leave "CLOSED" on the dashboard. */
+    invalidate('sales', 'catalog');
     /* The server may know something this device did not (another till opened the day): show the truth. */
-    void refresh().catch(() => undefined);
+    void refresh()
+      .then(() => invalidate('sales', 'catalog'))
+      .catch(() => undefined);
     throw translate(error);
   }
 }
