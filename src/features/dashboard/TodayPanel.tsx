@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChefHat, LockKeyhole, Receipt, ShoppingCart, Store, UtensilsCrossed } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
@@ -9,6 +9,16 @@ import { hoursMinutes } from '@/features/restaurant/CloseConfirm';
 import { QuickCloseDialog, QuickOpenDialog } from '@/features/restaurant/QuickDialogs';
 import { useBranchSession, useRs } from '@/features/restaurant/shared';
 
+/** 3725 → "01:02:05"; past a day → "1d 03:04:05". */
+function clock(seconds: number): string {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${d > 0 ? `${d}d ` : ''}${two(h)}:${two(m)}:${two(s)}`;
+}
+
 /**
  * The top of the dashboard on every device: is the restaurant open, and the
  * four things people do next — one tap each. On a phone it is the first screen
@@ -18,7 +28,16 @@ export function TodayPanel() {
   const { t } = useTranslation();
   const { r, longDate } = useRs();
   const { can } = useSession();
-  const { open, loading, reload } = useBranchSession();
+  const { open, session, loading, reload } = useBranchSession();
+  /* Live counter: how long the restaurant has been open, or closed. Over 24 hours it blinks. */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const since = open ? open.openedAt : session?.closedAt ?? null;
+  const elapsedS = since ? Math.max(0, Math.floor((now - new Date(since).getTime()) / 1000)) : null;
+  const overDay = elapsedS !== null && elapsedS >= 24 * 3600;
   const [dialog, setDialog] = useState<'open' | 'close' | null>(null);
   const tk = (k: string) => t(k as TranslationKey);
 
@@ -37,7 +56,9 @@ export function TodayPanel() {
           className={cn(
             'flex items-center gap-3 rounded-2xl border p-4',
             open ? 'border-success-200 bg-success-50/70' : 'border-danger-200 bg-danger-50/70',
+            overDay && 'blink-alert',
           )}
+          data-over-day={overDay ? 'true' : undefined}
         >
           <span className={cn('grid h-12 w-12 shrink-0 place-items-center rounded-2xl', open ? 'bg-success-100 text-success-700' : 'bg-danger-100 text-danger-700')}>
             {open ? <Store className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
@@ -50,6 +71,15 @@ export function TodayPanel() {
             <div className="truncate text-xs text-ink-600">
               {open ? `${open.number} · ${longDate(open.businessDate)} · ${hoursMinutes(open.openedAt)}` : tk('today.closedHint')}
             </div>
+            {elapsedS !== null && (
+              <div
+                data-testid="today-counter"
+                className={cn('numeric mt-0.5 text-sm font-semibold', overDay ? 'text-danger-700' : open ? 'text-success-800' : 'text-ink-700')}
+              >
+                {tk(open ? 'today.openFor' : 'today.closedFor')} {clock(elapsedS)}
+                {overDay && <span className="ms-1.5 text-xs font-bold">· {tk('today.overDay')}</span>}
+              </div>
+            )}
           </div>
           {open
             ? can('restaurant.session.close') && (

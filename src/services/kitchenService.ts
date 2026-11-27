@@ -1,4 +1,5 @@
 import { SAMPLE_ACTIVITY, SERVER_CORE } from '@/config/env';
+import { newestOrderFirst } from '@/lib/orderSort';
 import { hybridKitchen } from './hybrid/wrappers';
 import { USE_MOCKS } from '@/config/env';
 import { kitchenApi } from './api';
@@ -44,9 +45,7 @@ const baseKitchenService = {
     }
 
     await delay(160);
-    return [...orders].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
+    return [...orders].sort(newestOrderFirst);
   },
 
   async setStatus(id: string, status: KitchenOrderStatus): Promise<KitchenOrder> {

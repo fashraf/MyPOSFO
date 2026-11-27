@@ -4117,6 +4117,9 @@ export const ar: Dictionary = {
   today: {
     newOrder: 'طلب جديد',
     closedHint: 'افتح المطعم لاستقبال الطلبات',
+    openFor: 'مفتوح منذ',
+    closedFor: 'مغلق منذ',
+    overDay: 'أكثر من 24 ساعة',
     given: 'المستلم',
     show: 'عرض',
   },
