@@ -87,7 +87,9 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     import('./taxService'),
     import('./printerService'),
     import('./discountService'),
-  ]).then(([rs, sales, catalog, perms, kitchen, tax, printers, discounts]) => {
+    import('./expenseService'),
+    import('./ledgerService'),
+  ]).then(([rs, sales, catalog, perms, kitchen, tax, printers, discounts, expenses, ledger]) => {
     (window as unknown as Record<string, unknown>).__pos = {
       restaurantSessionService: rs.restaurantSessionService,
       salesService: sales.salesService,
@@ -98,6 +100,9 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
       taxService: tax.taxService,
       printerService: printers.printerService,
       discountService: discounts.discountService,
+      returnsService: sales.returnsService,
+      expenseService: expenses.expenseService,
+      ledgerService: ledger.ledgerService,
     };
   });
 }

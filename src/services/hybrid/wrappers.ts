@@ -62,6 +62,31 @@ export function hybridSessions<T extends AnyService>(base: T): T {
       );
     },
 
+    /* One source of truth for the drawer: the server's own expected cash (sales, returns, cancels, movements). */
+    async summary(id: string): Promise<any> {
+      await both();
+      const local: any = await base.summary(id);
+      if (!local || local.cash === undefined || !/^\d+$/.test(String(id))) return local;
+      try {
+        const server = await api.get<Record<string, number>>(`/api/restaurant-sessions/${encodeURIComponent(id)}/closing-preview`);
+        return { ...local, cash: { ...local.cash, ...server } };
+      } catch {
+        return local;
+      }
+    },
+
+    async closingPreview(id: string): Promise<any> {
+      await both();
+      const local: any = await base.closingPreview(id);
+      if (!local?.summary?.cash || !/^\d+$/.test(String(id))) return local;
+      try {
+        const server = await api.get<Record<string, number>>(`/api/restaurant-sessions/${encodeURIComponent(id)}/closing-preview`);
+        return { ...local, summary: { ...local.summary, cash: { ...local.summary.cash, ...server } } };
+      } catch {
+        return local;
+      }
+    },
+
     async close(input: any, actor: any): Promise<RestaurantSession> {
       await Promise.all([syncSessions(true), syncSales(true)]);
       return serverBacked(
@@ -119,6 +144,28 @@ export function hybridSales<T extends AnyService>(base: T): T {
       );
     },
 
+  } as T;
+}
+
+/* ----------------------------------------------------------------- returns */
+
+/** Returns (credit notes) are committed by the server: number 500001+, cash refund in the open day, stock back. */
+export function hybridReturns<T extends AnyService>(base: T): T {
+  return {
+    ...base,
+    ...refreshingReads(base, ['notesFor', 'remaining'], () => syncSales()),
+    async issue(input: any): Promise<any> {
+      await syncSales(true);
+      const key = globalThis.crypto?.randomUUID?.() ?? `crn-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      return serverBacked(
+        () => base.issue(input),
+        (local: any) => api.post(`/api/sales/${encodeURIComponent(input.saleId)}/returns`, { note: local, idempotencyKey: key }),
+        async () => {
+          await syncSales(true);
+          void syncCatalog(true).catch(() => undefined);
+        },
+      );
+    },
   } as T;
 }
 

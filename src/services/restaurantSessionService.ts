@@ -214,7 +214,8 @@ function logAudit(entry: Omit<SessionAuditEntry, 'id' | 'at'> & { at?: string })
 }
 
 function windowEnd(s: RestaurantSession): string {
-  return s.closedAt ?? new Date(Date.now() + 60_000).toISOString();
+  /* An open day has no end yet. Not "now": records are stamped by the server's clock, which may be ahead of this device's. */
+  return s.closedAt ?? '9999-12-31T23:59:59.999Z';
 }
 
 function inWindow(at: string | undefined, s: RestaurantSession): boolean {
@@ -252,6 +253,9 @@ function noteInSession(note: CreditNote, sale: Sale | undefined, s: RestaurantSe
 /** Was this order cancelled during the session itself (rather than later)? */
 function voidedWithin(sale: Sale, s: RestaurantSession): boolean {
   if (sale.status !== 'voided' || !sale.voidedAt) return false;
+  /* The server records which day a cancel happened in; times from two clocks (server, this device) cannot decide it. */
+  if (sale.voidSessionId) return sale.voidSessionId === s.id;
+  if (s.status === 'open') return true;
   return sale.voidedAt <= windowEnd(s);
 }
 
@@ -525,10 +529,12 @@ const baseRestaurantSessionService = {
     const previous = sessions
       .filter((x) => x.branchId === input.branchId && x.registerId === registerId && x.closedAt)
       .sort((a, b) => b.closedAt!.localeCompare(a.closedAt!))[0];
-    if (previous && openedAt < previous.closedAt!) {
-      /* The form works in whole minutes; reopening in the same minute the last
-         session closed is normal, so snap forward instead of refusing. */
-      if (previous.closedAt!.slice(0, 16) <= openedAt.slice(0, 16)) {
+    if (previous && Date.parse(openedAt) < Date.parse(previous.closedAt!)) {
+      /* "Now" on this device can be behind the clock that stamped the close (the server, or another device), so
+         reopening right after closing looked like an overlap. Only an opening time the person deliberately moved
+         back (more than 5 minutes before this device's now) is refused; anything else starts when the last closed. */
+      const deliberate = Date.parse(openedAt) < Date.now() - 5 * 60_000;
+      if (!deliberate || previous.closedAt!.slice(0, 16) <= openedAt.slice(0, 16)) {
         openedAt = previous.closedAt!;
       } else {
         fail(422, 'OVERLAPS_PREVIOUS', `Opening time must be after the previous session (${previous.number}) closed.`);

@@ -36,7 +36,7 @@ import { seedFor } from './mock/seed';
 import { registerSlice } from './mock/db';
 import { generateHistory, type ZatcaChain } from './mock/history';
 import { SAMPLE_ACTIVITY, SERVER_CORE } from '@/config/env';
-import { hybridSales } from './hybrid/wrappers';
+import { hybridReturns, hybridSales } from './hybrid/wrappers';
 import { companyService } from './companyService';
 import { openSessionSync, requireOpenSession, takeOrderNumber } from './restaurantSessionService';
 import { GENESIS_PIH, stampInvoice, uuidV4 } from '@/lib/zatca';
@@ -939,7 +939,7 @@ export interface ReturnInput {
   issuedBy: string;
 }
 
-export const returnsService = {
+const baseReturnsService = {
   /** Credit notes already raised against a sale. */
   async notesFor(saleId: string): Promise<CreditNote[]> {
     await delay(120);
@@ -1471,3 +1471,4 @@ export const zatcaService = {
 
 /** Hybrid mode: sales are committed and numbered by the server; see services/hybrid/serverCore.ts. */
 export const salesService = SERVER_CORE ? hybridSales(baseSalesService) : baseSalesService;
+export const returnsService = SERVER_CORE ? hybridReturns(baseReturnsService) : baseReturnsService;
